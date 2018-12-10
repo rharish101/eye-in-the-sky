@@ -4,9 +4,13 @@ The approach used is: [Interactive Medical Image Segmentation using Deep Learnin
 
 ## Instructions
 1. Download the dataset.
-2. Run the command:
+2. Install the python packages:
+  ```
+  pip install -r requirements.txt
+  ```
+3. Run the command:
   ```
   ./dataset_rot.py --data-path /path/to/dataset
   ```
-3. Next, run the command: `./main.py -h` to view the necessary arguments.
-4. Run `main.py` with the necessary arguments.
+4. Next, run the command: `./main.py -h` to view the necessary arguments.
+5. Run `main.py` with the necessary arguments.

@@ -1,0 +1,4 @@
+tensorflow
+libtiff
+numpy
+opencv-python
