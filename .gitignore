@@ -1,0 +1,7 @@
+gt/
+sat/
+__pycache__/
+logdir/
+ReadMe.txt
+License.txt
+try_*
