@@ -89,20 +89,21 @@ def interpret(space):
     }
     return result
 
-trials = Trials()
+def run(max_itersn trial_save):
+    trials = Trials()
 
-best = fmin(
-    fn=f,
-    space=space,
-    algo=tpe.suggest,
-    trials=trials,
-    max_evals=args.max_iters
-)
+    best = fmin(
+        fn=interpret,
+        space=space,
+        algo=tpe.suggest,
+        trials=trials,
+        max_evals=max_iters
+    )
 
-# The trials database now contains 100 entries, it can be saved/reloaded with pickle or another method
-pickle.dump(trials, open("{}saved_trials.p".format(args.trial_save), "wb"))
-# trials = pickle.load(open("saved_trials.p", "rb"))
+    # The trials database now contains 100 entries, it can be saved/reloaded with pickle or another method
+    pickle.dump(trials, open("{}saved_trials.p".format(trial_save), "wb"))
+    # trials = pickle.load(open("saved_trials.p", "rb"))
 
-print("Found minimum:")
-print(best)
-print("")
+    print("Found minimum:")
+    print(best)
+    print("")

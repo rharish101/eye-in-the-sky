@@ -96,6 +96,8 @@ tf.set_random_seed(args.random_seed)
 
 if args.hyperopt == 1:
     import hyperopt_tpe
+
+    hyperopt_tpe.run(args.max_iters, args.trail_save)
 else:
     print("Loading dataset...")
     data = get_datasets(
