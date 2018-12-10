@@ -69,11 +69,25 @@ parser.add_argument(
     default="./logdir",
     help="where to store Tensorboard summaries",
 )
+
+# Hyperopt Params
 parser.add_argument(
     "--hyperopt",
     type=int,
     default=1,
     help="enable hyperparameter search using hyperopt",
+)
+parser.add_argument(
+    "--max-iters",
+    type=int,
+    default=100,
+    help="max steps for hyperparameter search using hyperopt",
+)
+parser.add_argument(
+    "--trial_save",
+    type=str,
+    default="./",
+    help="path to save the pickle of trials",
 )
 
 args = parser.parse_args()

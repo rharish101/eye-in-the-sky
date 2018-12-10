@@ -1,4 +1,5 @@
 # HyperOpt Tree of Parzen Estimators method
+import pickle
 from hyperopt import fmin, tpe, hp, Trials, STATUS_OK, STATUS_FAIL
 
 space = {
@@ -13,7 +14,11 @@ space = {
     # Uniform distribution in finding appropriate dropout values, conv layers
     'dropout_drop_proba': hp.uniform('dropout_proba', 0.0, 0.7),
     # Activations that are used everywhere
-    'activation': hp.choice('activation', ['relu', 'elu'])
+    'activation': hp.choice('activation', ['relu', 'elu']),
+    # Other scaling hyperparameters
+    't_0': hp.uniform('t_0', 0.0, 1.0),
+    'sigma': hp.uniform('sigma', 0.0, 100.0),
+    'lmbda': hp.uniform('lmbda', 0.0, 100.0)
 }
 
 def interpret(space):
@@ -42,7 +47,7 @@ def interpret(space):
     )
 
     # Building the Graph
-    model = Model(data, optimizer, weight_decay, drop_rate, act)
+    model = Model(data, optimizer, weight_decay, drop_rate, act, space['lmbda'], space['sigma'], space['t_0'])
 
     # Limit GPU usage
     gpu_options = tf.GPUOptions(allow_growth=True)
@@ -91,9 +96,13 @@ best = fmin(
     space=space,
     algo=tpe.suggest,
     trials=trials,
-    max_evals=100
+    max_evals=args.max_iters
 )
 
-print("Found minimum after 1000 trials:")
+# The trials database now contains 100 entries, it can be saved/reloaded with pickle or another method
+pickle.dump(trials, open("{}saved_trials.p".format(args.trial_save), "wb"))
+# trials = pickle.load(open("saved_trials.p", "rb"))
+
+print("Found minimum:")
 print(best)
 print("")

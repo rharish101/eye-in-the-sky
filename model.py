@@ -7,7 +7,8 @@ from datetime import datetime
 class Model(object):
     """Model for Interactive Medical Image Segmentation."""
 
-    def __init__(self, data, optimizer, weight_decay, dropout, activation=tf.nn.relu):
+    def __init__(self, data, optimizer, weight_decay, dropout, activation=tf.nn.relu,
+                 lmbda=0.1, sigma=1.0, t_0=0.6):
         """Initialize the graph with the given data.
 
         Args:
@@ -31,10 +32,10 @@ class Model(object):
         self.activation = activation
 
         # Grid Search
-        self._lmbda = 0.1
-        self._sigma = 1.0
+        self._lmbda = lmbda
+        self._sigma = sigma
         # T_1 is ignored, as we're using softmax and checking for best value
-        self._t_0 = 0.6
+        self._t_0 = t_0
 
         self._build_graph()
 
