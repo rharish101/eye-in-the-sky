@@ -5,3 +5,4 @@ logdir/
 ReadMe.txt
 License.txt
 try_*
+single_gpu.patch
