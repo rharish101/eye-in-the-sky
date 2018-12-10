@@ -69,45 +69,54 @@ parser.add_argument(
     default="./logdir",
     help="where to store Tensorboard summaries",
 )
+parser.add_argument(
+    "--hyperopt",
+    type=int,
+    default=1,
+    help="enable hyperparameter search using hyperopt",
+)
 
 args = parser.parse_args()
 
 tf.set_random_seed(args.random_seed)
 
-print("Loading dataset...")
-data = get_datasets(
-    args.data_path, args.val_split, args.test_split, args.batch_size
-)
-print("Dataset loaded")
+if args.hyperopt == 1:
+    import hyperopt_tpe
+else:
+    print("Loading dataset...")
+    data = get_datasets(
+        args.data_path, args.val_split, args.test_split, args.batch_size
+    )
+    print("Dataset loaded")
 
-print("Building graph...")
-model = Model(data, tf.train.AdamOptimizer(), args.weight_decay, args.dropout)
-print("Graph built")
+    print("Building graph...")
+    model = Model(data, tf.train.AdamOptimizer(), args.weight_decay, args.dropout)
+    print("Graph built")
 
 
-# Limit GPU usage
-gpu_options = tf.GPUOptions(allow_growth=True)
-with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-    print("Starting training...")
-    if args.early_stop_steps != 0:
-        stopper = EarlyStopper(
-            args.early_stop_steps, args.early_stop_diff, "reduce"
-        )
-    else:
-        stopper = None
+    # Limit GPU usage
+    gpu_options = tf.GPUOptions(allow_growth=True)
+    with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+        print("Starting training...")
+        if args.early_stop_steps != 0:
+            stopper = EarlyStopper(
+                args.early_stop_steps, args.early_stop_diff, "reduce"
+            )
+        else:
+            stopper = None
 
-    try:
-        model.train(
-            sess,
-            args.max_steps,
-            args.log_dir,
-            args.log_steps,
-            stopper,
-            stop_on="loss",
-        )
-    except KeyboardInterrupt:
-        pass
-    print("Training done")
+        try:
+            model.train(
+                sess,
+                args.max_steps,
+                args.log_dir,
+                args.log_steps,
+                stopper,
+                stop_on="loss",
+            )
+        except KeyboardInterrupt:
+            pass
+        print("Training done")
 
-    print("Starting testing...")
-    model.evaluate("test")
+        print("Starting testing...")
+        model.evaluate("test")

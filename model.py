@@ -7,7 +7,7 @@ from datetime import datetime
 class Model(object):
     """Model for Interactive Medical Image Segmentation."""
 
-    def __init__(self, data, optimizer, weight_decay, dropout):
+    def __init__(self, data, optimizer, weight_decay, dropout, activation=tf.nn.relu):
         """Initialize the graph with the given data.
 
         Args:
@@ -15,6 +15,8 @@ class Model(object):
             optimizer(`tf.train.Optimizer`): The optimizer instance
             weight_decay(float): L2 regularisation scale
             dropout(float): dropout probability
+            activation(callable): The activation function to be applied
+                (None value disables this)
         """
         # Sanity check
         if dropout <= 0 or dropout > 1:
@@ -26,6 +28,7 @@ class Model(object):
         self.weight_decay = weight_decay
         self.dropout = dropout
         self.optimizer = optimizer
+        self.activation = activation
 
         # Grid Search
         self._lmbda = 0.1
@@ -78,11 +81,13 @@ class Model(object):
             else:
                 return norm
 
-    def _model_func(self, inputs):
+    def _model_func(self, inputs, activation=tf.nn.relu):
         """Create model and return model output with and without softmax.
 
         Args:
             inputs(`tf.Tensor`): The inputs to the model
+            activation(callable): The activation function to be applied
+                (None value disables this)
 
         Returns:
             `tf.Tensor`: The output of the model (w. softmax)
@@ -91,51 +96,51 @@ class Model(object):
         """
         # Block 1
         z = self._conv_layer(
-            inputs, filters=64, kernel_size=3, dilation_rate=1, scope="b11"
+            inputs, filters=64, kernel_size=3, dilation_rate=1, scope="b11", activation=activation
         )
         p1 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=1, scope="b12"
+            z, filters=64, kernel_size=3, dilation_rate=1, scope="b12", activation=activation
         )
 
         # Block 2
         z = self._conv_layer(
-            p1, filters=64, kernel_size=3, dilation_rate=2, scope="b21"
+            p1, filters=64, kernel_size=3, dilation_rate=2, scope="b21", activation=activation
         )
         p2 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=2, scope="b22"
+            z, filters=64, kernel_size=3, dilation_rate=2, scope="b22", activation=activation
         )
 
         # Block 3
         z = self._conv_layer(
-            p2, filters=64, kernel_size=3, dilation_rate=4, scope="b31"
+            p2, filters=64, kernel_size=3, dilation_rate=4, scope="b31", activation=activation
         )
         z = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=4, scope="b32"
+            z, filters=64, kernel_size=3, dilation_rate=4, scope="b32", activation=activation
         )
         p3 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=4, scope="b33"
+            z, filters=64, kernel_size=3, dilation_rate=4, scope="b33", activation=activation
         )
 
         # Block 4
         z = self._conv_layer(
-            p3, filters=64, kernel_size=3, dilation_rate=8, scope="b41"
+            p3, filters=64, kernel_size=3, dilation_rate=8, scope="b41", activation=activation
         )
         z = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=8, scope="b42"
+            z, filters=64, kernel_size=3, dilation_rate=8, scope="b42", activation=activation
         )
         p4 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=8, scope="b43"
+            z, filters=64, kernel_size=3, dilation_rate=8, scope="b43", activation=activation
         )
 
         # Block 5
         z = self._conv_layer(
-            p4, filters=64, kernel_size=3, dilation_rate=16, scope="b51"
+            p4, filters=64, kernel_size=3, dilation_rate=16, scope="b51", activation=activation
         )
         z = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=16, scope="b52"
+            z, filters=64, kernel_size=3, dilation_rate=16, scope="b52", activation=activation
         )
         p5 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=16, scope="b53"
+            z, filters=64, kernel_size=3, dilation_rate=16, scope="b53", activation=activation
         )
 
         # Block 6
@@ -146,7 +151,7 @@ class Model(object):
             lambda: z,
         )
         z = self._conv_layer(
-            z, filters=128, kernel_size=1, dilation_rate=1, scope="b63"
+            z, filters=128, kernel_size=1, dilation_rate=1, scope="b63", activation=activation
         )
         z = tf.cond(
             self._is_train,
@@ -237,7 +242,7 @@ class Model(object):
             lambda: self.data["iterators"]["train"].get_next(),
             lambda: self.data["iterators"]["test"].get_next(),
         )
-        soft_out, out = self._model_func(x)
+        soft_out, out = self._model_func(x, activation=self.activation)
         self._loss = self._get_loss(x, y, soft_out, out)
         tf.summary.scalar("loss", self._loss)
 
@@ -308,6 +313,8 @@ class Model(object):
                     curr_loss, curr_acc
                 )
             )
+
+        return curr_loss, curr_acc
 
     def train(
         self,
