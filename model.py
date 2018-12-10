@@ -239,13 +239,13 @@ class Model(object):
         )
         soft_out, out = self._model_func(x)
         self._loss = self._get_loss(x, y, soft_out, out)
-        tf.summary.scalar("train_loss", self._loss)
+        tf.summary.scalar("loss", self._loss)
 
         with tf.variable_scope("metrics") as scope:
             _, self._acc_op = tf.metrics.accuracy(
                 labels=tf.argmax(y, -1), predictions=tf.argmax(soft_out, -1)
             )
-            tf.summary.scalar("train_acc", self._acc_op)
+            tf.summary.scalar("acc", self._acc_op)
 
             metrics = tf.contrib.framework.get_variables(
                 scope, collection=tf.GraphKeys.LOCAL_VARIABLES
@@ -284,12 +284,12 @@ class Model(object):
         if mode == "val":
             # Add Tensorboard summary for validation loss and metrics manually
             summary = tf.Summary()
-            summary.value.add(tag=u"val_loss", simple_value=curr_loss)
-            self._writer.add_summary(summary, self._step)
+            summary.value.add(tag="loss", simple_value=curr_loss)
+            self._val_writer.add_summary(summary, self._step)
 
             summary = tf.Summary()
-            summary.value.add(tag=u"metrics/val_acc", simple_value=curr_acc)
-            self._writer.add_summary(summary, self._step)
+            summary.value.add(tag="metrics/acc", simple_value=curr_acc)
+            self._val_writer.add_summary(summary, self._step)
 
             print(
                 "Step: {:5d}, Val. Loss: {:12.4f}, Val. Acc: {:.4f}".format(
@@ -310,7 +310,13 @@ class Model(object):
             )
 
     def train(
-        self, sess, max_steps, log_steps=0, stopper=None, stop_on="loss"
+        self,
+        sess,
+        max_steps,
+        logdir,
+        log_steps=0,
+        stopper=None,
+        stop_on="loss",
     ):
         """Train the model on the training dataset.
 
@@ -332,9 +338,11 @@ class Model(object):
         self._sess = sess
 
         sess.run(tf.global_variables_initializer())
-        self._writer = tf.summary.FileWriter(
-            "./logdir/" + datetime.now().strftime("%Y-%m-%d,%H:%M:%S")
-        )
+        if logdir[-1] != "/":
+            logdir += "/"
+        logdir = logdir + datetime.now().strftime("%Y-%m-%d,%H:%M:%S")
+        self.train_writer = tf.summary.FileWriter(logdir + "/train")
+        self._val_writer = tf.summary.FileWriter(logdir + "/val")
 
         if stopper is None:
             self.stopper = None
@@ -358,7 +366,7 @@ class Model(object):
                 [self._merged_summ, self._train_step],
                 feed_dict={self._is_train: True},
             )
-            self._writer.add_summary(summary, i)
+            self.train_writer.add_summary(summary, i)
 
             # Validation data testing
             if log_steps != 0 and i % log_steps == 0:

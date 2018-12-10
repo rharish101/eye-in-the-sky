@@ -63,6 +63,12 @@ parser.add_argument(
     default=10,
     help="steps after which to test on validation",
 )
+parser.add_argument(
+    "--log-dir",
+    type=str,
+    default="./logdir",
+    help="where to store Tensorboard summaries",
+)
 
 args = parser.parse_args()
 
@@ -92,7 +98,12 @@ with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
 
     try:
         model.train(
-            sess, args.max_steps, args.log_steps, stopper, stop_on="loss"
+            sess,
+            args.max_steps,
+            args.log_dir,
+            args.log_steps,
+            stopper,
+            stop_on="loss",
         )
     except KeyboardInterrupt:
         pass
