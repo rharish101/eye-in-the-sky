@@ -288,7 +288,7 @@ class Model(object):
             self._writer.add_summary(summary, self._step)
 
             summary = tf.Summary()
-            summary.value.add(tag=u"val_acc", simple_value=curr_acc)
+            summary.value.add(tag=u"metrics/val_acc", simple_value=curr_acc)
             self._writer.add_summary(summary, self._step)
 
             print(
