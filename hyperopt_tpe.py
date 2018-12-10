@@ -1,6 +1,88 @@
 # HyperOpt Tree of Parzen Estimators method
 import pickle
 from hyperopt import fmin, tpe, hp, Trials, STATUS_OK, STATUS_FAIL
+from __future__ import print_function
+from __future__ import division
+import tensorflow as tf
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from utils import get_datasets, EarlyStopper
+from model import Model
+
+parser = ArgumentParser(
+    description="Interactive Medical Image Segmentation for Eye-in-the-Sky",
+    formatter_class=ArgumentDefaultsHelpFormatter,
+)
+parser.add_argument(
+    "--data-path", type=str, default="./", help="path to dataset"
+)
+
+# Known hyperparams
+parser.add_argument("--batch-size", type=int, default=32, help="batch size")
+parser.add_argument(
+    "--weight-decay", type=float, default=5e-4, help="L2 regularisation scale"
+)
+parser.add_argument(
+    "--max-steps", type=int, default=1000, help="maximum no. of training steps"
+)
+
+# Unknown hyperparams
+parser.add_argument("--random-seed", type=int, default=5, help="random seed")
+parser.add_argument(
+    "--val-split",
+    type=float,
+    default=0.2,
+    help="fraction of data to use as validation",
+)
+parser.add_argument(
+    "--test-split",
+    type=float,
+    default=0.2,
+    help="fraction of data to use as test data",
+)
+parser.add_argument(
+    "--early-stop-diff",
+    type=float,
+    default=5e-4,
+    help="minimum change for early stopping",
+)
+parser.add_argument(
+    "--early-stop-steps",
+    type=int,
+    default=5,
+    help="minimum steps to wait for early stopping (0 disables early "
+    "stopping)",
+)
+
+# Miscellaneous
+parser.add_argument(
+    "--log-steps",
+    type=int,
+    default=10,
+    help="steps after which to test on validation",
+)
+parser.add_argument(
+    "--log-dir",
+    type=str,
+    default="./logdir",
+    help="where to store Tensorboard summaries",
+)
+
+parser.add_argument(
+    "--max-iters",
+    type=int,
+    default=100,
+    help="max steps for hyperparameter search using hyperopt",
+)
+parser.add_argument(
+    "--trial-save",
+    type=str,
+    default="./",
+    help="path to save the pickle of trials",
+)
+
+args = parser.parse_args()
+
+tf.set_random_seed(args.random_seed)
 
 space = {
     # Learning Rate
@@ -89,21 +171,20 @@ def interpret(space):
     }
     return result
 
-def run(max_itersn trial_save):
-    trials = Trials()
+trials = Trials()
 
-    best = fmin(
-        fn=interpret,
-        space=space,
-        algo=tpe.suggest,
-        trials=trials,
-        max_evals=max_iters
-    )
+best = fmin(
+    fn=interpret,
+    space=space,
+    algo=tpe.suggest,
+    trials=trials,
+    max_evals=args.max_iters
+)
 
-    # The trials database now contains 100 entries, it can be saved/reloaded with pickle or another method
-    pickle.dump(trials, open("{}saved_trials.p".format(trial_save), "wb"))
-    # trials = pickle.load(open("saved_trials.p", "rb"))
+# The trials database now contains 100 entries, it can be saved/reloaded with pickle or another method
+pickle.dump(trials, open("{}saved_trials.p".format(args.trial_save), "wb"))
+# trials = pickle.load(open("saved_trials.p", "rb"))
 
-    print("Found minimum:")
-    print(best)
-    print("")
+print("Found minimum:")
+print(best)
+print("")
