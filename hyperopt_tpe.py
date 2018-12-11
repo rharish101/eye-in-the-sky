@@ -1,8 +1,8 @@
 # HyperOpt Tree of Parzen Estimators method
-import pickle
-from hyperopt import fmin, tpe, hp, Trials, STATUS_OK, STATUS_FAIL
 from __future__ import print_function
 from __future__ import division
+import pickle
+from hyperopt import fmin, tpe, hp, Trials, STATUS_OK, STATUS_FAIL
 import tensorflow as tf
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from utils import get_datasets, EarlyStopper
@@ -17,10 +17,6 @@ parser.add_argument(
 )
 
 # Known hyperparams
-parser.add_argument("--batch-size", type=int, default=32, help="batch size")
-parser.add_argument(
-    "--weight-decay", type=float, default=5e-4, help="L2 regularisation scale"
-)
 parser.add_argument(
     "--max-steps", type=int, default=1000, help="maximum no. of training steps"
 )
@@ -86,11 +82,11 @@ tf.set_random_seed(args.random_seed)
 
 space = {
     # Learning Rate
-    'lr': hp.loguniform('lr_rate_mult', 0.00001, 0.001),
+    'lr': hp.uniform('lr_rate_mult', 0.00001, 0.001),
     # L2 weight decay:
-    'weight_decay': hp.loguniform('weight_decay', 5e-5, 5e-3),
+    'weight_decay': hp.uniform('weight_decay', 5e-5, 5e-3),
     # Batch size fed for each gradient update
-    'batch_size': hp.quniform('batch_size', 32, 256, 32),
+    'batch_size': hp.choice('batch_size', [16, 32, 64]),
     # Choice of optimizer:
     'optimizer': hp.choice('optimizer', ['Adam', 'Adagrad', 'RMSprop']),
     # Uniform distribution in finding appropriate dropout values, conv layers
@@ -129,7 +125,7 @@ def interpret(space):
     )
 
     # Building the Graph
-    model = Model(data, optimizer, weight_decay, drop_rate, act, space['lmbda'], space['sigma'], space['t_0'])
+    model = Model(data, opt, weight_decay, drop_rate, act, space['lmbda'], space['sigma'], space['t_0'])
 
     # Limit GPU usage
     gpu_options = tf.GPUOptions(allow_growth=True)
@@ -169,6 +165,8 @@ def interpret(space):
         "status": STATUS_OK,
         "space": space
     }
+    tf.reset_default_graph()
+
     return result
 
 trials = Trials()

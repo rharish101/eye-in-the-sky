@@ -379,5 +379,9 @@ class Model(object):
             # Validation data testing
             if log_steps != 0 and i % log_steps == 0:
                 self.evaluate("val")
-                if self.stopper.stop:
+                if self.stopper is not None and self.stopper.stop:
                     break
+
+            # Test data
+            if log_steps != 0 and i % (4 * log_steps) == 0:
+                self.evaluate("test")

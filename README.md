@@ -14,3 +14,6 @@ The approach used is: [Interactive Medical Image Segmentation using Deep Learnin
   ```
 4. Next, run the command: `./main.py -h` to view the necessary arguments.
 5. Run `main.py` with the necessary arguments.
+
+## Instruction to reproduce the best model results
+1 `python best_model.py --data-path /path/to/data --max-steps 500000 --early-stop-diff 5e-12 --early-stop-steps 0 --save-dir /data/avikpal/model2.ckpt`
