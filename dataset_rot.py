@@ -8,6 +8,9 @@ import random
 import os
 from libtiff import TIFF as t
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+import pickle
+
+EXCLUDE = ["2.tif", "7.tif", "12.tif"]
 
 parser = ArgumentParser(
     description="Interactive Medical Image Segmentation for Eye-in-the-Sky",
@@ -17,11 +20,13 @@ parser.add_argument(
     "--data-path", type=str, default="./", help="path to dataset"
 )
 args = parser.parse_args()
+if args.data_path[-1] != "/":
+    args.data_path += "/"
 
 random.seed(5)
 
-gnd_path = args.data_path + "/gt/"
-img_path = args.data_path + "/sat/"
+gnd_path = args.data_path + "gt/"
+img_path = args.data_path + "sat/"
 
 gnd_save_path = gnd_path + "rotated/"
 img_save_path = img_path + "rotated/"
@@ -33,13 +38,19 @@ if not os.path.exists(img_save_path):
 
 
 def get_colours():
+    if "colours.pkl" in os.listdir("./"):
+        with open("colours.pkl", "rb") as cfile:
+            return pickle.load(cfile)
     colours = set()
     for image_path in glob.glob(gnd_path + "*.tif"):
         tiff = t.open(image_path)
         img_gt = tiff.read_image()
         tiff.close()
         colours.update(list(map(tuple, np.reshape(img_gt, (-1, 3)).tolist())))
-    return sorted(colours)
+    colours = sorted(colours)
+    with open("colours.pkl", "wb") as cfile:
+        pickle.dump(colours, cfile)
+    return colours
 
 
 if __name__ == "__main__":
@@ -49,6 +60,8 @@ if __name__ == "__main__":
     count = 0
     for image_path in sorted(glob.glob(img_path + "*.tif")):
         name = image_path.split("/")[-1]
+        if name in EXCLUDE:
+            continue
 
         tiff = t.open(image_path)
         img_sat = tiff.read_image()

@@ -1,4 +1,5 @@
-# HyperOpt Tree of Parzen Estimators method
+#!/usr/bin/env python3
+"""HyperOpt Tree of Parzen Estimators method"""
 from __future__ import print_function
 from __future__ import division
 import tensorflow as tf
