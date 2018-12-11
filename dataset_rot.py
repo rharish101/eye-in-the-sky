@@ -10,7 +10,8 @@ from libtiff import TIFF as t
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 import pickle
 
-EXCLUDE = ["2.tif", "7.tif", "12.tif"]
+# EXCLUDE = ["2.tif", "7.tif", "12.tif"]
+EXCLUDE = []
 
 parser = ArgumentParser(
     description="Interactive Medical Image Segmentation for Eye-in-the-Sky",
