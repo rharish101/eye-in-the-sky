@@ -3,6 +3,7 @@ import tensorflow as tf
 from libtiff import TIFF as tiff
 import os
 import numpy as np
+from dataset_rot import EXCLUDE
 
 CLASSES = 9
 
@@ -30,13 +31,15 @@ def get_images(path):
 
 def get_test_images(path):
     """Load actual test dataset images."""
-    images = [
-        tif
-        for tif in os.listdir(path + "sat_test")
-        if tif[-4:] == ".tif"
-    ]
+    # images = [
+    # tif
+    # for tif in os.listdir(path + "sat_test")
+    # if tif[-4:] == ".tif"
+    # ]
+    images = EXCLUDE
 
     for img in images:
+        # tif = tiff.open(path + "sat_test/" + img)
         tif = tiff.open(path + "sat/" + img)
         image = tif.read_image()
         tif.close()

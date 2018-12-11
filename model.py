@@ -331,9 +331,6 @@ class Model(object):
             path: path to the saved model
             sess_options: options for the `tf.Session` invoked here
         """
-        if path[-1] != "/":
-            path += "/"
-
         self._is_train = tf.constant(False)
         x, name = self.data["iterators"]["actual"].get_next()
         soft_out, _ = self._model_func(x, activation=self.activation)
@@ -360,7 +357,7 @@ class Model(object):
             for i in range(img.shape[0]):
                 for j in range(img.shape[1]):
                     new_img[i, j] = colours[img[i, j]]
-            cv2.imwrite(path + name.decode("utf8") + "_result.png", new_img)
+            cv2.imwrite(name.decode("utf8") + "_result.png", new_img)
 
     def train(
         self,
@@ -425,6 +422,7 @@ class Model(object):
             if log_steps != 0 and i % log_steps == 0:
                 self.evaluate("val")
                 if self.stopper is not None and self.stopper.stop:
+                    print("Stopping")
                     break
 
             # Test data
