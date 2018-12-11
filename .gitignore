@@ -6,3 +6,7 @@ ReadMe.txt
 License.txt
 try_*
 single_gpu.patch
+checkpoint
+model.ckpt.*
+*_result.png
+sat_test/

@@ -28,6 +28,21 @@ def get_images(path):
     return np.array(orig), np.array(seg)
 
 
+def get_test_images(path):
+    """Load actual test dataset images."""
+    images = [
+        tif
+        for tif in os.listdir(path + "sat_test")
+        if tif[-4:] == ".tif"
+    ]
+
+    for img in images:
+        tif = tiff.open(path + "sat/" + img)
+        image = tif.read_image()
+        tif.close()
+        yield image, img
+
+
 def get_datasets(path, val_split, test_split, batch_size):
     """Get training, validation and test datasets.
 
@@ -97,8 +112,19 @@ def get_datasets(path, val_split, test_split, batch_size):
     test_init_op = test_iterator.make_initializer(test_dataset)
     del orig, seg
 
+    # Get actual test dataset
+    act_dataset = tf.data.Dataset.from_generator(
+        lambda: get_test_images(path),
+        (tf.uint16, tf.string),
+        (tf.TensorShape([None, None, 4]), tf.TensorShape([]))
+    )
+    act_dataset = act_dataset.map(lambda x, y: (tf.to_float(x), y)).batch(1)
+    act_iterator = act_dataset.make_one_shot_iterator()
+
     return {
-        "iterators": {"train": train_iterator, "test": test_iterator},
+        "iterators": {
+            "train": train_iterator, "test": test_iterator, "actual": act_iterator
+        },
         "init_ops": {"val": val_init_op, "test": test_init_op},
     }
 

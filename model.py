@@ -1,14 +1,17 @@
 """Model for Interactive Medical Image Segmentation."""
 import tensorflow as tf
 from utils import CLASSES, EarlyStopper
+from dataset_rot import get_colours
 from datetime import datetime
+import numpy as np
+import cv2
 
 
 class Model(object):
     """Model for Interactive Medical Image Segmentation."""
 
     def __init__(self, data, optimizer, weight_decay, dropout, activation=tf.nn.relu,
-                 lmbda=0.1, sigma=1.0, t_0=0.6):
+                 lmbda=0.1, sigma=1.0, t_0=0.6, build=True):
         """Initialize the graph with the given data.
 
         Args:
@@ -18,6 +21,7 @@ class Model(object):
             dropout(float): dropout probability
             activation(callable): The activation function to be applied
                 (None value disables this)
+            build(bool): Whether to build the graph
         """
         # Sanity check
         if dropout <= 0 or dropout > 1:
@@ -37,7 +41,8 @@ class Model(object):
         # T_1 is ignored, as we're using softmax and checking for best value
         self._t_0 = t_0
 
-        self._build_graph()
+        if build:
+            self._build_graph()
 
     def _conv_layer(
         self,
@@ -316,6 +321,46 @@ class Model(object):
             )
 
         return curr_loss, curr_acc
+
+    def inference(self, path, sess_options=tf.ConfigProto()):
+        """Builds inference graph and runs on the actual test dataset.
+
+        Note than this should not be called inside a `tf.Session()`
+
+        Args:
+            path: path to the saved model
+            sess_options: options for the `tf.Session` invoked here
+        """
+        if path[-1] != "/":
+            path += "/"
+
+        self._is_train = tf.constant(False)
+        x, name = self.data["iterators"]["actual"].get_next()
+        soft_out, _ = self._model_func(x, activation=self.activation)
+        pred = tf.argmax(soft_out, axis=-1)
+
+        loader = tf.train.Saver()
+
+        images = []
+        names = []
+        with tf.Session(config=sess_options) as sess:
+            loader.restore(sess, path)
+            try:
+                while True:
+                    curr_images, curr_names = sess.run([pred, name])
+                    images += list(curr_images)
+                    names += list(curr_names)
+            except tf.errors.OutOfRangeError:
+                # End of dataset
+                pass
+
+        colours = get_colours()
+        for img, name in zip(images, names):
+            new_img = np.zeros((*(img.shape[:2]), 3))
+            for i in range(img.shape[0]):
+                for j in range(img.shape[1]):
+                    new_img[i, j] = colours[img[i, j]]
+            cv2.imwrite(path + name.decode("utf8") + "_result.png", new_img)
 
     def train(
         self,
