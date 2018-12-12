@@ -357,7 +357,7 @@ class Model(object):
             for i in range(img.shape[0]):
                 for j in range(img.shape[1]):
                     new_img[i, j] = colours[img[i, j]]
-            cv2.imwrite(name.decode("utf8") + "_result.png", new_img)
+            cv2.imwrite(name.decode("utf8") + "_result.png", new_img[:, :, ::-1])
 
     def train(
         self,
