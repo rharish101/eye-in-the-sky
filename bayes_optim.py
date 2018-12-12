@@ -6,6 +6,7 @@ import pickle
 from bayes_opt import BayesianOptimization
 import tensorflow as tf
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+import traceback
 from utils import get_datasets, EarlyStopper
 from model import Model
 
@@ -93,10 +94,10 @@ space = {
     # L2 weight decay:
     'weight_decay': (5e-5, 5e-3),
     # Uniform distribution in finding appropriate dropout values, conv layers
-    'dropout_drop_proba': (0.0, 0.7),
+    'dropout_drop_proba': (0.01, 0.7),
     # Other scaling hyperparameters
     't_0': (0.0, 1.0),
-    'sigma': (0.0, 100.0),
+    'sigma': (0.001, 100.0),
     'lmbda': (0.0, 100.0)
 }
 
@@ -114,38 +115,42 @@ def interpret(**space):
         args.data_path, args.val_split, args.test_split, batch_size
     )
 
-    # Building the Graph
-    model = Model(data, opt, weight_decay, drop_rate, act, space['lmbda'], space['sigma'], space['t_0'])
+    try:
+        # Building the Graph
+        model = Model(data, opt, weight_decay, drop_rate, act, space['lmbda'], space['sigma'], space['t_0'])
 
-    # Limit GPU usage
-    gpu_options = tf.GPUOptions(allow_growth=True)
-    with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-        print("Starting training...")
-        if args.early_stop_steps != 0:
-            stopper = EarlyStopper(
-                args.early_stop_steps, args.early_stop_diff, "reduce"
-            )
-        else:
-            stopper = None
+        # Limit GPU usage
+        gpu_options = tf.GPUOptions(allow_growth=True)
+        with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+            print("Starting training...")
+            if args.early_stop_steps != 0:
+                stopper = EarlyStopper(
+                    args.early_stop_steps, args.early_stop_diff, "reduce"
+                )
+            else:
+                stopper = None
 
-        try:
-            model.train(
-                sess,
-                args.max_steps,
-                args.log_dir,
-                args.log_steps,
-                stopper,
-                stop_on="loss",
-            )
-        except KeyboardInterrupt:
-            result = {
-                # Loss is the negative accuracy, so that we get the maximum accuracy
-                "status": STATUS_FAIL,
-                "space": space
-            }
-            return result
+            try:
+                model.train(
+                    sess,
+                    args.max_steps,
+                    args.log_dir,
+                    args.log_steps,
+                    stopper,
+                    stop_on="loss",
+                )
+            except KeyboardInterrupt:
+                result = {
+                    # Loss is the negative accuracy, so that we get the maximum accuracy
+                    "status": STATUS_FAIL,
+                    "space": space
+                }
+                return result
 
-        loss, acc = model.evaluate("val")
+            loss, acc = model.evaluate("val")
+    except Exception:
+        print(traceback.format_exc())
+        acc = 0.0
 
     tf.reset_default_graph()
 
