@@ -26,7 +26,7 @@ def get_images(path):
         seg.append(tif.read_image())
         tif.close()
 
-    return np.array(orig)[:200], np.array(seg)[:200]
+    return np.array(orig), np.array(seg)
 
 
 def get_test_images(path):
