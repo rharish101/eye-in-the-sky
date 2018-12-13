@@ -1,10 +1,13 @@
 """Model for Interactive Medical Image Segmentation."""
 import tensorflow as tf
+from tensorflow.python.ops.metrics_impl import _streaming_confusion_matrix
 from utils import CLASSES, EarlyStopper
 from dataset_rot import get_colours
 from datetime import datetime
 import numpy as np
 import cv2
+from io import BytesIO
+import matplotlib.pyplot as plt
 
 
 class Model(object):
@@ -355,6 +358,18 @@ class Model(object):
             )
             tf.summary.scalar("acc", self._acc_op)
 
+            _, self._kappa_op = tf.contrib.metrics.cohen_kappa(
+                labels=labels, predictions_idx=pred, num_classes=CLASSES
+            )
+            tf.summary.scalar("kappa", self._kappa_op)
+
+            _, self._conf_mat = _streaming_confusion_matrix(
+                labels=labels, predictions=pred, num_classes=CLASSES
+            )
+            tf.summary.image(
+                "confusion_matrix", self._get_mat_img(self._conf_mat)
+            )
+
             metrics = tf.contrib.framework.get_variables(
                 scope, collection=tf.GraphKeys.LOCAL_VARIABLES
             )
@@ -363,7 +378,28 @@ class Model(object):
         self._train_step = self.optimizer.minimize(self._loss)
         self._merged_summ = tf.summary.merge_all()
 
-    def evaluate(self, mode):
+    def _get_mat_img(self, conf_mat, numpy=False):
+        if numpy:
+            image = np.zeros((CLASSES * 10, CLASSES * 10))
+            for i in range(CLASSES * 10):
+                for j in range(CLASSES * 10):
+                    image[i, j] = conf_mat[i // 10, j // 10]
+            # Rescale image into uint8 bounds
+            return (255 * (1 - np.tanh(image.astype(np.float32) / 50))).astype(
+                np.uint8
+            )
+        else:
+            image = tf.image.resize_images(
+                tf.reshape(conf_mat, (1, CLASSES, CLASSES, 1)),
+                [CLASSES * 10, CLASSES * 10],
+                method=tf.image.ResizeMethod.NEAREST_NEIGHBOR,
+            )
+            # Rescale image into uint8 bounds
+            return tf.cast(
+                255 * (1 - tf.tanh(tf.to_float(image) / 50)), tf.uint8
+            )
+
+    def evaluate(self, mode, sess=None):
         """Evaluate the model on the validation/test dataset.
 
         Mode should be one of "val" (validation) or "test" (testing)
@@ -371,16 +407,22 @@ class Model(object):
         mode = mode.lower().strip()
         if mode not in ["val", "test"]:
             raise ValueError("Mode should be one of 'val' or 'test'")
+        if not hasattr(self, "_sess"):
+            if sess is None:
+                raise ValueError(
+                    "Session not set. Please pass a session argument"
+                )
+            else:
+                self._sess = sess
 
         self._sess.run(self.data["init_ops"][mode])
         self._sess.run(self._init_metrics)
         count = 0
         curr_loss = 0
-        curr_acc = 0
         try:
             while True:
-                loss_diff, curr_acc = self._sess.run(
-                    [self._loss, self._acc_op],
+                loss_diff, curr_acc, curr_kappa, curr_conf = self._sess.run(
+                    [self._loss, self._acc_op, self._kappa_op, self._conf_mat],
                     feed_dict={self._is_train: False},
                 )
                 curr_loss += loss_diff
@@ -388,6 +430,7 @@ class Model(object):
         except tf.errors.OutOfRangeError:
             # End of dataset
             curr_loss /= count
+            conf_mat_img = self._get_mat_img(curr_conf, numpy=True)
 
         if mode == "val":
             # Add Tensorboard summary for validation loss and metrics manually
@@ -399,9 +442,25 @@ class Model(object):
             summary.value.add(tag="metrics/acc", simple_value=curr_acc)
             self._val_writer.add_summary(summary, self._step)
 
+            summary = tf.Summary()
+            summary.value.add(tag="metrics/kappa", simple_value=curr_kappa)
+            self._val_writer.add_summary(summary, self._step)
+
+            str_io = BytesIO()
+            plt.imsave(str_io, conf_mat_img, format="png", cmap="gray")
+            img_sum = tf.Summary.Image(
+                encoded_image_string=str_io.getvalue(),
+                height=conf_mat_img.shape[0],
+                width=conf_mat_img.shape[1],
+            )
+            summary = tf.Summary()
+            summary.value.add(tag="metrics/confusion_matrix", image=img_sum)
+            self._val_writer.add_summary(summary, self._step)
+
             print(
-                "Step: {:5d}, Val. Loss: {:12.4f}, Val. Acc: {:.4f}".format(
-                    self._step + 1, curr_loss, curr_acc
+                "Step: {:5d}, Val. Loss: {:12.4f}, Val. Acc: {:.4f}, "
+                "Val. Kappa: {:.4f}".format(
+                    self._step + 1, curr_loss, curr_acc, curr_kappa
                 )
             )
 
@@ -412,12 +471,13 @@ class Model(object):
                     self.stopper.update(curr_acc)
         else:
             print(
-                "Test Loss: {:12.4f}, Test Acc.: {:.4f}".format(
-                    curr_loss, curr_acc
-                )
+                "Test Loss: {:12.4f}, Test Acc.: {:.4f}, "
+                "Test Kappa: {:.4f}".format(curr_loss, curr_acc, curr_kappa)
             )
+            np.save("./conf_mat.npy", conf_mat_img)
+            print("Test Confustion Matrix saved as ./conf_mat.npy")
 
-        return curr_loss, curr_acc
+        return curr_loss, curr_acc, curr_kappa, curr_conf
 
     def inference(self, path, sess_options=tf.ConfigProto()):
         """Build inference graph and runs on the actual test dataset.

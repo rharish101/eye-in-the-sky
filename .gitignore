@@ -10,3 +10,4 @@ checkpoint
 model.ckpt.*
 *_result.png
 sat_test/
+conf_mat.npy
