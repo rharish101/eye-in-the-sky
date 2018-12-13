@@ -496,7 +496,7 @@ class Model(object):
 
         first, second = tf.nn.top_k(soft_out, k=2)
         pred = tf.where(
-            first != self._colours.index((255, 255, 255), first, second)
+            first != self._colours.index((255, 255, 255)), first, second
         )
 
         loader = tf.train.Saver()
