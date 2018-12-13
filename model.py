@@ -367,7 +367,7 @@ class Model(object):
                 labels=labels, predictions=pred, num_classes=CLASSES
             )
             tf.summary.image(
-                "confusion_matrix", self._get_mat_img(self._conf_mat)
+                "confusion", self._get_mat_img(self._conf_mat)
             )
 
             metrics = tf.contrib.framework.get_variables(
@@ -454,7 +454,7 @@ class Model(object):
                 width=conf_mat_img.shape[1],
             )
             summary = tf.Summary()
-            summary.value.add(tag="metrics/confusion_matrix", image=img_sum)
+            summary.value.add(tag="metrics/confusion", image=img_sum)
             self._val_writer.add_summary(summary, self._step)
 
             print(
