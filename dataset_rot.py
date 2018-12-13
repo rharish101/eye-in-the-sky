@@ -14,11 +14,9 @@ EXCLUDE = ["2.tif", "7.tif", "12.tif"]
 
 random.seed(5)
 
-gnd_path = "./gt/"
-img_path = "./sat/"
 
-
-def get_colours():
+def get_colours(gnd_path="./gt"):
+    """Get mapping between RGB colour tuples and non-negative integers."""
     if "colours.pkl" in os.listdir("./"):
         with open("colours.pkl", "rb") as cfile:
             return pickle.load(cfile)

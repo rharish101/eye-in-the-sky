@@ -31,22 +31,78 @@ def get_images(path):
 
 def get_test_images(path):
     """Load actual test dataset images."""
-    # images = [
-    # tif
-    # for tif in os.listdir(path + "sat_test")
-    # if tif[-4:] == ".tif"
-    # ]
-    images = EXCLUDE
+    images = [
+        tif for tif in os.listdir(path + "sat_test") if tif[-4:] == ".tif"
+    ]
 
     for img in images:
-        # tif = tiff.open(path + "sat_test/" + img)
-        tif = tiff.open(path + "sat/" + img)
+        tif = tiff.open(path + "sat_test/" + img)
         image = tif.read_image()
         tif.close()
         yield image, img
 
 
+def one_hot(x, y):
+    """One hot the outputs, and make input float."""
+    return tf.to_float(x), tf.one_hot(tf.squeeze(y, axis=-1), CLASSES)
+
+
 def get_datasets(path, val_split, test_split, batch_size):
+    """Get the test dataset from excluded images.
+
+    This function is similar to `get_old_datasets`, but it uses the excluded
+    images as both validation and test datasets.
+
+    Args:
+        path(str): The path to the dataset
+        val_split(float): Ignored; kept for compatibility
+        test_split(float): Ignored; kept for compatibility
+        batch_size(int): The batch size
+
+    Returns:
+        dict: {
+            "iterators": {
+                "train": `tf.data.Iterator`, "test": `tf.data.Iterator`
+            },
+            "init_ops": {"val": `tf.Operation`, "test": `tf.Operation`}
+        }
+
+    """
+    info = get_old_datasets(path, 0, 0, batch_size)
+
+    def excl_gen():
+        images = EXCLUDE
+        for img in images:
+            tif = tiff.open(path + "sat/" + img)
+            sat = tif.read_image()
+            tif.close()
+            tif = tiff.open(path + "gt/" + img)
+            gt = tif.read_image()
+            tif.close()
+            yield sat, gt
+
+    dataset = tf.data.Dataset.from_generator(
+        excl_gen,
+        (tf.uint16, tf.uint8),
+        (tf.TensorShape([None, None, 4]), tf.TensorShape([None, None, 3])),
+    )
+    dataset = dataset.map(one_hot).batch(1)
+    test_iterator = tf.data.Iterator.from_structure(
+        dataset.output_types, dataset.output_shapes
+    )
+    test_init_op = test_iterator.make_initializer(dataset)
+
+    return {
+        "iterators": {
+            "train": info["iterators"]["train"],
+            "test": test_iterator,
+            "actual": info["iterators"]["actual"],
+        },
+        "init_ops": {"val": test_init_op, "test": test_init_op},
+    }
+
+
+def get_old_datasets(path, val_split, test_split, batch_size):
     """Get training, validation and test datasets.
 
     Two iterators are created: "train" and "test". The "train" iterator is
@@ -87,9 +143,6 @@ def get_datasets(path, val_split, test_split, batch_size):
             )
         )
 
-    def one_hot(x, y):
-        return tf.to_float(x), tf.one_hot(tf.squeeze(y, axis=-1), CLASSES)
-
     orig, seg = get_images(path)
     dataset = tf.data.Dataset.from_tensor_slices((orig, seg))
     dataset = dataset.map(one_hot).shuffle(1000)
@@ -119,14 +172,16 @@ def get_datasets(path, val_split, test_split, batch_size):
     act_dataset = tf.data.Dataset.from_generator(
         lambda: get_test_images(path),
         (tf.uint16, tf.string),
-        (tf.TensorShape([None, None, 4]), tf.TensorShape([]))
+        (tf.TensorShape([None, None, 4]), tf.TensorShape([])),
     )
     act_dataset = act_dataset.map(lambda x, y: (tf.to_float(x), y)).batch(1)
     act_iterator = act_dataset.make_one_shot_iterator()
 
     return {
         "iterators": {
-            "train": train_iterator, "test": test_iterator, "actual": act_iterator
+            "train": train_iterator,
+            "test": test_iterator,
+            "actual": act_iterator,
         },
         "init_ops": {"val": val_init_op, "test": test_init_op},
     }
