@@ -3,7 +3,7 @@ import tensorflow as tf
 from libtiff import TIFF as tiff
 import os
 import numpy as np
-from dataset_rot import EXCLUDE
+from dataset_rot import EXCLUDE, get_colours
 
 CLASSES = 9
 
@@ -69,6 +69,7 @@ def get_datasets(path, val_split, test_split, batch_size):
 
     """
     info = get_old_datasets(path, 0, 0, batch_size)
+    colours = get_colours(path + "gt/")
 
     def excl_gen():
         images = EXCLUDE
@@ -79,12 +80,15 @@ def get_datasets(path, val_split, test_split, batch_size):
             tif = tiff.open(path + "gt/" + img)
             gt = tif.read_image()
             tif.close()
+
+            new_gt = [colours.index(tuple(i)) for i in gt.reshape((-1, 3))]
+            gt = np.reshape(new_gt, (*(gt.shape[:2]), 1)).astype(np.uint8)
             yield sat, gt
 
     dataset = tf.data.Dataset.from_generator(
         excl_gen,
         (tf.uint16, tf.uint8),
-        (tf.TensorShape([None, None, 4]), tf.TensorShape([None, None, 3])),
+        (tf.TensorShape([None, None, 4]), tf.TensorShape([None, None, 1])),
     )
     dataset = dataset.map(one_hot).batch(1)
     test_iterator = tf.data.Iterator.from_structure(
