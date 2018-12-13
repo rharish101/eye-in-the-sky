@@ -5,6 +5,7 @@ from __future__ import print_function
 from __future__ import division
 import tensorflow as tf
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from utils import get_datasets
 from model import Model
 
 parser = ArgumentParser(
