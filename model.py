@@ -10,8 +10,18 @@ import cv2
 class Model(object):
     """Model for Interactive Medical Image Segmentation."""
 
-    def __init__(self, data, optimizer, weight_decay, dropout, activation=tf.nn.relu,
-                 lmbda=0.1, sigma=1.0, t_0=0.6, build=True):
+    def __init__(
+        self,
+        data,
+        optimizer,
+        weight_decay,
+        dropout,
+        activation=tf.nn.relu,
+        lmbda=0.1,
+        sigma=1.0,
+        t_0=0.6,
+        build=True,
+    ):
         """Initialize the graph with the given data.
 
         Args:
@@ -40,6 +50,9 @@ class Model(object):
         self._sigma = sigma
         # T_1 is ignored, as we're using softmax and checking for best value
         self._t_0 = t_0
+
+        # Colour mapping
+        self._colours = get_colours()
 
         if build:
             self._build_graph()
@@ -102,51 +115,116 @@ class Model(object):
         """
         # Block 1
         z = self._conv_layer(
-            inputs, filters=64, kernel_size=3, dilation_rate=1, scope="b11", activation=activation
+            inputs,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=1,
+            scope="b11",
+            activation=activation,
         )
         p1 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=1, scope="b12", activation=activation
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=1,
+            scope="b12",
+            activation=activation,
         )
 
         # Block 2
         z = self._conv_layer(
-            p1, filters=64, kernel_size=3, dilation_rate=2, scope="b21", activation=activation
+            p1,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=2,
+            scope="b21",
+            activation=activation,
         )
         p2 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=2, scope="b22", activation=activation
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=2,
+            scope="b22",
+            activation=activation,
         )
 
         # Block 3
         z = self._conv_layer(
-            p2, filters=64, kernel_size=3, dilation_rate=4, scope="b31", activation=activation
+            p2,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=4,
+            scope="b31",
+            activation=activation,
         )
         z = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=4, scope="b32", activation=activation
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=4,
+            scope="b32",
+            activation=activation,
         )
         p3 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=4, scope="b33", activation=activation
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=4,
+            scope="b33",
+            activation=activation,
         )
 
         # Block 4
         z = self._conv_layer(
-            p3, filters=64, kernel_size=3, dilation_rate=8, scope="b41", activation=activation
+            p3,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=8,
+            scope="b41",
+            activation=activation,
         )
         z = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=8, scope="b42", activation=activation
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=8,
+            scope="b42",
+            activation=activation,
         )
         p4 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=8, scope="b43", activation=activation
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=8,
+            scope="b43",
+            activation=activation,
         )
 
         # Block 5
         z = self._conv_layer(
-            p4, filters=64, kernel_size=3, dilation_rate=16, scope="b51", activation=activation
+            p4,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=16,
+            scope="b51",
+            activation=activation,
         )
         z = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=16, scope="b52", activation=activation
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=16,
+            scope="b52",
+            activation=activation,
         )
         p5 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=16, scope="b53", activation=activation
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=16,
+            scope="b53",
+            activation=activation,
         )
 
         # Block 6
@@ -157,7 +235,12 @@ class Model(object):
             lambda: z,
         )
         z = self._conv_layer(
-            z, filters=128, kernel_size=1, dilation_rate=1, scope="b63", activation=activation
+            z,
+            filters=128,
+            kernel_size=1,
+            dilation_rate=1,
+            scope="b63",
+            activation=activation,
         )
         z = tf.cond(
             self._is_train,
@@ -253,8 +336,22 @@ class Model(object):
         tf.summary.scalar("loss", self._loss)
 
         with tf.variable_scope("metrics") as scope:
+            # Get labels and predictions as [batch_size, length], where
+            # elements are labels of pixels
+            pred = tf.layers.flatten(tf.argmax(soft_out, axis=-1))
+            labels = tf.layers.flatten(tf.argmax(y, -1))
+            # True indicates that the pixel does not have white colour
+            # This mask is obtained on labels only
+            mask = tf.not_equal(labels, self._colours.index((255, 255, 255)))
+            # Choose those pixels that DO NOT have white colour
+            # NOTE: This destroys the batch axis
+            labels = tf.boolean_mask(labels, mask)
+            # The same mask is used for predictions, to ignore the exact
+            # same pixels
+            pred = tf.boolean_mask(pred, mask)
+
             _, self._acc_op = tf.metrics.accuracy(
-                labels=tf.argmax(y, -1), predictions=tf.argmax(soft_out, -1)
+                labels=labels, predictions=pred
             )
             tf.summary.scalar("acc", self._acc_op)
 
@@ -323,9 +420,11 @@ class Model(object):
         return curr_loss, curr_acc
 
     def inference(self, path, sess_options=tf.ConfigProto()):
-        """Builds inference graph and runs on the actual test dataset.
+        """Build inference graph and runs on the actual test dataset.
 
-        Note than this should not be called inside a `tf.Session()`
+        When inference is required, this model should be initialized without
+        the graph being built. Note than this should not be called inside a
+        `tf.Session()`, as it creates one by itself.
 
         Args:
             path: path to the saved model
@@ -351,13 +450,14 @@ class Model(object):
                 # End of dataset
                 pass
 
-        colours = get_colours()
         for img, name in zip(images, names):
             new_img = np.zeros((*(img.shape[:2]), 3))
             for i in range(img.shape[0]):
                 for j in range(img.shape[1]):
-                    new_img[i, j] = colours[img[i, j]]
-            cv2.imwrite(name.decode("utf8") + "_result.png", new_img[:, :, ::-1])
+                    new_img[i, j] = self._colours[img[i, j]]
+            cv2.imwrite(
+                name.decode("utf8") + "_result.png", new_img[:, :, ::-1]
+            )
 
     def train(
         self,
