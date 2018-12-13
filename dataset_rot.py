@@ -12,29 +12,10 @@ import pickle
 
 EXCLUDE = ["2.tif", "7.tif", "12.tif"]
 
-parser = ArgumentParser(
-    description="Interactive Medical Image Segmentation for Eye-in-the-Sky",
-    formatter_class=ArgumentDefaultsHelpFormatter,
-)
-parser.add_argument(
-    "--data-path", type=str, default="./", help="path to dataset"
-)
-args = parser.parse_args()
-if args.data_path[-1] != "/":
-    args.data_path += "/"
-
 random.seed(5)
 
-gnd_path = args.data_path + "gt/"
-img_path = args.data_path + "sat/"
-
-gnd_save_path = gnd_path + "rotated/"
-img_save_path = img_path + "rotated/"
-
-if not os.path.exists(gnd_save_path):
-    os.mkdir(gnd_save_path)
-if not os.path.exists(img_save_path):
-    os.mkdir(img_save_path)
+gnd_path = "./gt/"
+img_path = "./sat/"
 
 
 def get_colours():
@@ -54,6 +35,28 @@ def get_colours():
 
 
 if __name__ == "__main__":
+    parser = ArgumentParser(
+        description="Dataset generator for Eye-in-the-Sky",
+        formatter_class=ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--data-path", type=str, default="./", help="path to dataset"
+    )
+    args = parser.parse_args()
+    if args.data_path[-1] != "/":
+        args.data_path += "/"
+
+    gnd_path = args.data_path + "gt/"
+    img_path = args.data_path + "sat/"
+
+    gnd_save_path = gnd_path + "rotated/"
+    img_save_path = img_path + "rotated/"
+
+    if not os.path.exists(gnd_save_path):
+        os.mkdir(gnd_save_path)
+    if not os.path.exists(img_save_path):
+        os.mkdir(img_save_path)
+
     colours = get_colours()
     print("Total {} classes found".format(len(colours)))
 
@@ -124,6 +127,7 @@ if __name__ == "__main__":
 
                     count += 1
                     print(
-                        "\rGenerated {} input-output pair(s)".format(count), end=""
+                        "\rGenerated {} input-output pair(s)".format(count),
+                        end="",
                     )
     print("")
