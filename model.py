@@ -366,9 +366,7 @@ class Model(object):
             _, self._conf_mat = _streaming_confusion_matrix(
                 labels=labels, predictions=pred, num_classes=CLASSES
             )
-            tf.summary.image(
-                "confusion", self._get_mat_img(self._conf_mat)
-            )
+            tf.summary.image("confusion", self._get_mat_img(self._conf_mat))
 
             metrics = tf.contrib.framework.get_variables(
                 scope, collection=tf.GraphKeys.LOCAL_VARIABLES
@@ -380,24 +378,26 @@ class Model(object):
 
     def _get_mat_img(self, conf_mat, numpy=False):
         if numpy:
+            total = np.sum(conf_mat)
+            rescaled = (255 * (conf_mat / np.clip(total, 1, 1e7))).astype(
+                np.uint8
+            )
             image = np.zeros((CLASSES * 10, CLASSES * 10))
             for i in range(CLASSES * 10):
                 for j in range(CLASSES * 10):
-                    image[i, j] = conf_mat[i // 10, j // 10]
-            # Rescale image into uint8 bounds
-            return (255 * (1 - np.tanh(image.astype(np.float32) / 50))).astype(
-                np.uint8
-            )
+                    image[i, j] = rescaled[i // 10, j // 10]
+            return image
         else:
+            total = tf.reduce_sum(conf_mat, axis=0)
+            rescaled = tf.cast(
+                255 * (conf_mat / tf.clip_by_value(total, 1, 1e7)), tf.uint8
+            )
             image = tf.image.resize_images(
-                tf.reshape(conf_mat, (1, CLASSES, CLASSES, 1)),
+                tf.reshape(rescaled, (1, CLASSES, CLASSES, 1)),
                 [CLASSES * 10, CLASSES * 10],
                 method=tf.image.ResizeMethod.NEAREST_NEIGHBOR,
             )
-            # Rescale image into uint8 bounds
-            return tf.cast(
-                255 * (1 - tf.tanh(tf.to_float(image) / 50)), tf.uint8
-            )
+            return image
 
     def evaluate(self, mode, sess=None):
         """Evaluate the model on the validation/test dataset.
