@@ -494,9 +494,12 @@ class Model(object):
         x, name = self.data["iterators"]["actual"].get_next()
         soft_out, _ = self._model_func(x, activation=self.activation)
 
-        first, second = tf.nn.top_k(soft_out, k=2)
+        _, indices = tf.nn.top_k(soft_out, k=2)
+        first, second = tf.unstack(indices, axis=-1)
         pred = tf.where(
-            first != self._colours.index((255, 255, 255)), first, second
+            tf.not_equal(first, self._colours.index((255, 255, 255))),
+            first,
+            second,
         )
 
         loader = tf.train.Saver()
