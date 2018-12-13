@@ -493,7 +493,11 @@ class Model(object):
         self._is_train = tf.constant(False)
         x, name = self.data["iterators"]["actual"].get_next()
         soft_out, _ = self._model_func(x, activation=self.activation)
-        pred = tf.argmax(soft_out, axis=-1)
+
+        first, second = tf.nn.top_k(soft_out, k=2)
+        pred = tf.where(
+            first != self._colours.index((255, 255, 255), first, second)
+        )
 
         loader = tf.train.Saver()
 
