@@ -15,7 +15,7 @@ EXCLUDE = ["2.tif", "7.tif", "12.tif"]
 random.seed(5)
 
 
-def get_colours(gnd_path="./gt"):
+def get_colours(gnd_path):
     """Get mapping between RGB colour tuples and non-negative integers."""
     if "colours.pkl" in os.listdir("./"):
         with open("colours.pkl", "rb") as cfile:
