@@ -94,7 +94,9 @@ def get_datasets(path, val_split, test_split, batch_size):
         (tf.TensorShape([None, None, 4]), tf.TensorShape([None, None, 1])),
     )
     dataset = dataset.map(one_hot).padded_batch(
-        1, (tf.TensorShape([1700, 1700, 4]), tf.TensorShape([1700, 1700, 9]))
+        1,
+        (tf.TensorShape([1700, 1700, 4]), tf.TensorShape([1700, 1700, 9])),
+        drop_remainder=True
     )
     test_iterator = tf.data.Iterator.from_structure(
         dataset.output_types, dataset.output_shapes
