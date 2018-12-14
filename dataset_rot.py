@@ -47,7 +47,7 @@ if __name__ == "__main__":
     gnd_path = args.data_path + "gt/"
     img_path = args.data_path + "sat/"
 
-    colours = get_colours()
+    colours = get_colours(gnd_path)
     print("Total {} classes found".format(len(colours)))
 
     count = 0
