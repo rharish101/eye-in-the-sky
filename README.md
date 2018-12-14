@@ -13,17 +13,25 @@ The approach used is: [Interactive Medical Image Segmentation using Deep Learnin
   ./dataset_rot.py --data-path /path/to/train/dataset
   ```
 
-## Retraining the best model
+## Instructions
+### Retraining the best model
 ```
 ./best_model.py --data-path /path/to/train/dataset --max-steps 500000 --early-stop-diff 5e-12 --early-stop-steps 0 --save-dir /path/where/model/is/to/be/saved
 ```
 
-## Reproducing the best model results
+### Reproducing the best model results
 ```
 ./evaluate.py --data-path /path/to/train/dataset --save-dir /path/where/model/is/saved
 ```
 
-## Getting predictions for test data
+### Getting predictions for test data
 ```
 ./inference.py --data-path /path/to/test/dataset --save-dir /path/where/model/is/saved
 ```
+
+## Info
+All python scripts are executable and use argparse for commandline arguments. More info about a script's arguments can be obtained by:
+```
+./script.py -h
+```
+Docstrings are provided for almost all public functions and classes for further info.
