@@ -8,7 +8,8 @@ import numpy as np
 import cv2
 from io import BytesIO
 import matplotlib
-matplotlib.use('agg')
+
+matplotlib.use("agg")
 import matplotlib.pyplot as plt
 
 
@@ -70,7 +71,6 @@ class Model(object):
         dilation_rate,
         scope,
         activation=tf.nn.relu,
-        reuse=False,
     ):
         """2D convolution layer with batch normalization.
 
@@ -89,7 +89,7 @@ class Model(object):
             `tf.Tensor`: The output of the layer
 
         """
-        with tf.variable_scope(scope, reuse=reuse):
+        with tf.variable_scope(scope):
             conv = tf.layers.conv2d(
                 inputs,
                 filters=filters,
@@ -106,7 +106,7 @@ class Model(object):
             else:
                 return norm
 
-    def _model_func(self, inputs, activation=tf.nn.relu, reuse=False):
+    def _model_func(self, inputs, activation=tf.nn.relu):
         """Create model and return model output with and without softmax.
 
         Args:
@@ -127,7 +127,6 @@ class Model(object):
             dilation_rate=1,
             scope="b11",
             activation=activation,
-            reuse=reuse,
         )
         p1 = self._conv_layer(
             z,
@@ -136,7 +135,6 @@ class Model(object):
             dilation_rate=1,
             scope="b12",
             activation=activation,
-            reuse=reuse,
         )
 
         # Block 2
@@ -147,7 +145,6 @@ class Model(object):
             dilation_rate=2,
             scope="b21",
             activation=activation,
-            reuse=reuse,
         )
         p2 = self._conv_layer(
             z,
@@ -156,7 +153,6 @@ class Model(object):
             dilation_rate=2,
             scope="b22",
             activation=activation,
-            reuse=reuse,
         )
 
         # Block 3
@@ -167,7 +163,6 @@ class Model(object):
             dilation_rate=4,
             scope="b31",
             activation=activation,
-            reuse=reuse,
         )
         z = self._conv_layer(
             z,
@@ -176,7 +171,6 @@ class Model(object):
             dilation_rate=4,
             scope="b32",
             activation=activation,
-            reuse=reuse,
         )
         p3 = self._conv_layer(
             z,
@@ -185,7 +179,6 @@ class Model(object):
             dilation_rate=4,
             scope="b33",
             activation=activation,
-            reuse=reuse,
         )
 
         # Block 4
@@ -196,7 +189,6 @@ class Model(object):
             dilation_rate=8,
             scope="b41",
             activation=activation,
-            reuse=reuse,
         )
         z = self._conv_layer(
             z,
@@ -205,7 +197,6 @@ class Model(object):
             dilation_rate=8,
             scope="b42",
             activation=activation,
-            reuse=reuse,
         )
         p4 = self._conv_layer(
             z,
@@ -214,7 +205,6 @@ class Model(object):
             dilation_rate=8,
             scope="b43",
             activation=activation,
-            reuse=reuse,
         )
 
         # Block 5
@@ -225,7 +215,6 @@ class Model(object):
             dilation_rate=16,
             scope="b51",
             activation=activation,
-            reuse=reuse,
         )
         z = self._conv_layer(
             z,
@@ -234,7 +223,6 @@ class Model(object):
             dilation_rate=16,
             scope="b52",
             activation=activation,
-            reuse=reuse,
         )
         p5 = self._conv_layer(
             z,
@@ -243,7 +231,6 @@ class Model(object):
             dilation_rate=16,
             scope="b53",
             activation=activation,
-            reuse=reuse,
         )
 
         # Block 6
@@ -260,7 +247,6 @@ class Model(object):
             dilation_rate=1,
             scope="b63",
             activation=activation,
-            reuse=reuse,
         )
         z = tf.cond(
             self._is_train,
@@ -274,7 +260,6 @@ class Model(object):
             dilation_rate=1,
             scope="b65",
             activation=None,
-            reuse=reuse,
         )
         return tf.nn.softmax(out), out
 
@@ -346,18 +331,13 @@ class Model(object):
 
     def _build_graph(self):
         self._is_train = tf.placeholder(shape=(), dtype=tf.bool)
-
-        def train_graph():
-            x, y = self.data["iterators"]["train"].get_next()
-            soft_out, out = self._model_func(x, activation=self.activation)
-            return self._get_loss(x, y, soft_out, out), soft_out, y
-
-        def test_graph():
-            x, y = self.data["iterators"]["test"].get_next()
-            soft_out, out = self._model_func(x, activation=self.activation, reuse=tf.AUTO_REUSE)
-            return self._get_loss(x, y, soft_out, out), soft_out, y
-
-        self._loss, soft_out, y = tf.cond(self._is_train, train_graph, test_graph)
+        x, y = tf.cond(
+            self._is_train,
+            lambda: self.data["iterators"]["train"].get_next(),
+            lambda: self.data["iterators"]["test"].get_next(),
+        )
+        soft_out, out = self._model_func(x, activation=self.activation)
+        self._loss = self._get_loss(x, y, soft_out, out)
         tf.summary.scalar("loss", self._loss)
 
         with tf.variable_scope("metrics") as scope:

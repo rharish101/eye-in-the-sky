@@ -47,22 +47,23 @@ if __name__ == "__main__":
     gnd_path = args.data_path + "gt/"
     img_path = args.data_path + "sat/"
 
-    gnd_save_path = gnd_path + "rotated/"
-    img_save_path = img_path + "rotated/"
-
-    if not os.path.exists(gnd_save_path):
-        os.mkdir(gnd_save_path)
-    if not os.path.exists(img_save_path):
-        os.mkdir(img_save_path)
-
-    colours = get_colours()
+    colours = get_colours(gnd_path)
     print("Total {} classes found".format(len(colours)))
 
     count = 0
     for image_path in sorted(glob.glob(img_path + "*.tif")):
         name = image_path.split("/")[-1]
         if name in EXCLUDE:
-            continue
+            gnd_save_path = gnd_path + "rotated_test/"
+            img_save_path = img_path + "rotated_test/"
+        else:
+            gnd_save_path = gnd_path + "rotated/"
+            img_save_path = img_path + "rotated/"
+
+        if not os.path.exists(gnd_save_path):
+            os.mkdir(gnd_save_path)
+        if not os.path.exists(img_save_path):
+            os.mkdir(img_save_path)
 
         tiff = t.open(image_path)
         img_sat = tiff.read_image()
