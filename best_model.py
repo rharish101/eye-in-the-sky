@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HyperOpt Tree of Parzen Estimators method"""
+"""Best model for Interactive Medical Image Segmentation."""
 from __future__ import print_function
 from __future__ import division
 import tensorflow as tf
@@ -8,7 +8,7 @@ from utils import get_datasets, EarlyStopper
 from model import Model
 
 parser = ArgumentParser(
-    description="Interactive Medical Image Segmentation for Eye-in-the-Sky",
+    description="Best model for Interactive Medical Image Segmentation",
     formatter_class=ArgumentDefaultsHelpFormatter,
 )
 parser.add_argument(
@@ -73,15 +73,20 @@ args = parser.parse_args()
 tf.set_random_seed(args.random_seed)
 
 print("Loading dataset...")
-data = get_datasets(
-    args.data_path, args.val_split, args.test_split, 32
-)
+data = get_datasets(args.data_path, args.val_split, args.test_split, 32)
 print("Dataset loaded")
 
 print("Building graph...")
-model = Model(data, tf.train.AdamOptimizer(learning_rate=0.0008408132388618728),
-              0.003683848079337278, 0.6275728419832726, tf.nn.elu, 56.89889776692406,
-              45.40359136227982, 0.10805612575300722)
+model = Model(
+    data,
+    tf.train.AdamOptimizer(learning_rate=0.0008408132388618728),
+    0.003683848079337278,
+    0.6275728419832726,
+    tf.nn.elu,
+    56.89889776692406,
+    45.40359136227982,
+    0.10805612575300722,
+)
 print("Graph built")
 
 saver = tf.train.Saver()

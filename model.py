@@ -432,7 +432,6 @@ class Model(object):
         except tf.errors.OutOfRangeError:
             # End of dataset
             curr_loss /= count
-            conf_mat_img = self._get_mat_img(curr_conf, numpy=True)
 
         if mode == "val":
             # Add Tensorboard summary for validation loss and metrics manually
@@ -449,6 +448,7 @@ class Model(object):
             self._val_writer.add_summary(summary, self._step)
 
             str_io = BytesIO()
+            conf_mat_img = self._get_mat_img(curr_conf, numpy=True)
             plt.imsave(str_io, conf_mat_img, format="png", cmap="gray")
             img_sum = tf.Summary.Image(
                 encoded_image_string=str_io.getvalue(),
@@ -476,7 +476,7 @@ class Model(object):
                 "Test Loss: {:12.4f}, Test Acc.: {:.4f}, "
                 "Test Kappa: {:.4f}".format(curr_loss, curr_acc, curr_kappa)
             )
-            np.save("./conf_mat.npy", conf_mat_img)
+            np.save("./conf_mat.npy", curr_conf)
             print("Test Confustion Matrix saved as ./conf_mat.npy")
 
         return curr_loss, curr_acc, curr_kappa, curr_conf
