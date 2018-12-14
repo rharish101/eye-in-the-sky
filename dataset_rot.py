@@ -10,7 +10,7 @@ from libtiff import TIFF as t
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 import pickle
 
-EXCLUDE = ["2.tif", "7.tif", "12.tif"]
+EXCLUDE = ["8.tif", "11.tif", "12.tif"]
 
 random.seed(5)
 
