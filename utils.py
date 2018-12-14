@@ -3,7 +3,6 @@ import tensorflow as tf
 from libtiff import TIFF as tiff
 import os
 import numpy as np
-from dataset_rot import EXCLUDE, get_colours
 
 CLASSES = 9
 
@@ -30,6 +29,27 @@ def get_images(path):
 
 
 def get_test_images(path):
+    """Load test dataset images from the given path."""
+    images = [
+        "rotated_test/" + tif
+        for tif in os.listdir(path + "sat/rotated_test")
+        if tif[-4:] == ".tif"
+    ]
+
+    orig = []
+    seg = []
+    for img in images:
+        tif = tiff.open(path + "sat/" + img)
+        orig.append(tif.read_image())
+        tif.close()
+        tif = tiff.open(path + "gt/" + img)
+        seg.append(tif.read_image())
+        tif.close()
+
+    return np.array(orig), np.array(seg)
+
+
+def get_actual_images(path):
     """Load actual test dataset images."""
     images = [
         tif for tif in os.listdir(path + "sat_test") if tif[-4:] == ".tif"
@@ -71,32 +91,14 @@ def get_datasets(path, val_split, test_split, batch_size):
     """
     if path[-1] != "/":
         path += "/"
+    orig, seg = get_images(path)
     info = get_old_datasets(path, 0, 0, batch_size)
-    colours = get_colours(path + "gt/")
 
-    def excl_gen():
-        images = EXCLUDE
-        for img in images:
-            tif = tiff.open(path + "sat/" + img)
-            sat = tif.read_image()
-            tif.close()
-            tif = tiff.open(path + "gt/" + img)
-            gt = tif.read_image()
-            tif.close()
-
-            new_gt = [colours.index(tuple(i)) for i in gt.reshape((-1, 3))]
-            gt = np.reshape(new_gt, (*(gt.shape[:2]), 1)).astype(np.uint8)
-            yield sat, gt
-
-    dataset = tf.data.Dataset.from_generator(
-        excl_gen,
-        (tf.uint16, tf.uint8),
-        (tf.TensorShape([None, None, 4]), tf.TensorShape([None, None, 1])),
-    )
-    dataset = dataset.map(one_hot).padded_batch(
-        1,
-        (tf.TensorShape([1700, 1700, 4]), tf.TensorShape([1700, 1700, 9])),
-        drop_remainder=True
+    dataset = tf.data.Dataset.from_tensor_slices((orig, seg))
+    dataset = (
+        dataset.map(one_hot)
+        .shuffle(1000)
+        .batch(batch_size, drop_remainder=True)
     )
     test_iterator = tf.data.Iterator.from_structure(
         dataset.output_types, dataset.output_shapes
@@ -185,7 +187,7 @@ def get_old_datasets(path, val_split, test_split, batch_size):
 
     # Get actual test dataset
     act_dataset = tf.data.Dataset.from_generator(
-        lambda: get_test_images(path),
+        lambda: get_actual_images(path),
         (tf.uint16, tf.string),
         (tf.TensorShape([None, None, 4]), tf.TensorShape([])),
     )
