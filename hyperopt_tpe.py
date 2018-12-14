@@ -10,7 +10,8 @@ from utils import get_datasets, EarlyStopper
 from model import Model
 
 parser = ArgumentParser(
-    description="Interactive Medical Image Segmentation for Eye-in-the-Sky",
+    description="Hyperparameter optimization for Interactive Medical Image "
+    "Segmentation using TPE",
     formatter_class=ArgumentDefaultsHelpFormatter,
 )
 parser.add_argument(
