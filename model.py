@@ -55,7 +55,7 @@ class Model(object):
         self._t_0 = t_0
 
         # Colour mapping
-        self._colours = get_colours()
+        self._colours = get_colours(data["path"] + "gt/")
 
         if build:
             self._build_graph()

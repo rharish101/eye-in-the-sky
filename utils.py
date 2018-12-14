@@ -64,10 +64,13 @@ def get_datasets(path, val_split, test_split, batch_size):
             "iterators": {
                 "train": `tf.data.Iterator`, "test": `tf.data.Iterator`
             },
-            "init_ops": {"val": `tf.Operation`, "test": `tf.Operation`}
+            "init_ops": {"val": `tf.Operation`, "test": `tf.Operation`},
+            "path": str
         }
 
     """
+    if path[-1] != "/":
+        path += "/"
     info = get_old_datasets(path, 0, 0, batch_size)
     colours = get_colours(path + "gt/")
 
@@ -103,6 +106,7 @@ def get_datasets(path, val_split, test_split, batch_size):
             "actual": info["iterators"]["actual"],
         },
         "init_ops": {"val": test_init_op, "test": test_init_op},
+        "path": path,
     }
 
 
@@ -125,7 +129,8 @@ def get_old_datasets(path, val_split, test_split, batch_size):
             "iterators": {
                 "train": `tf.data.Iterator`, "test": `tf.data.Iterator`
             },
-            "init_ops": {"val": `tf.Operation`, "test": `tf.Operation`}
+            "init_ops": {"val": `tf.Operation`, "test": `tf.Operation`},
+            "path": str
         }
 
     """
@@ -147,6 +152,8 @@ def get_old_datasets(path, val_split, test_split, batch_size):
             )
         )
 
+    if path[-1] != "/":
+        path += "/"
     orig, seg = get_images(path)
     dataset = tf.data.Dataset.from_tensor_slices((orig, seg))
     dataset = dataset.map(one_hot).shuffle(1000)
@@ -188,6 +195,7 @@ def get_old_datasets(path, val_split, test_split, batch_size):
             "actual": act_iterator,
         },
         "init_ops": {"val": val_init_op, "test": test_init_op},
+        "path": path,
     }
 
 
