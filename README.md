@@ -16,7 +16,7 @@ The approach used is: [Interactive Medical Image Segmentation using Deep Learnin
 ## Instructions
 ### Retraining the best model
 ```
-./best_model.py --data-path /path/to/train/dataset --max-steps 500000 --early-stop-diff 5e-12 --early-stop-steps 0 --save-dir /path/where/model/is/to/be/saved
+./best_model.py --data-path /path/to/train/dataset --save-dir /path/where/model/is/to/be/saved
 ```
 
 ### Reproducing the best model results

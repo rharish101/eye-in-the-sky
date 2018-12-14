@@ -17,7 +17,10 @@ parser.add_argument(
 
 # Known hyperparams
 parser.add_argument(
-    "--max-steps", type=int, default=1000, help="maximum no. of training steps"
+    "--max-steps",
+    type=int,
+    default=500000,
+    help="maximum no. of training steps",
 )
 
 # Unknown hyperparams
@@ -37,13 +40,13 @@ parser.add_argument(
 parser.add_argument(
     "--early-stop-diff",
     type=float,
-    default=5e-4,
+    default=5e-7,
     help="minimum change for early stopping",
 )
 parser.add_argument(
     "--early-stop-steps",
     type=int,
-    default=5,
+    default=0,
     help="minimum steps to wait for early stopping (0 disables early "
     "stopping)",
 )
