@@ -19,7 +19,7 @@ parser.add_argument(
 parser.add_argument(
     "--max-steps",
     type=int,
-    default=500000,
+    default=50000,
     help="maximum no. of training steps",
 )
 
