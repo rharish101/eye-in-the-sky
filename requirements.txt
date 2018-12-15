@@ -2,3 +2,5 @@ tensorflow>=1.10.0
 libtiff
 numpy
 opencv-python
+matplotlib>=3.0.2
+hyperopt

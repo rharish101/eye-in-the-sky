@@ -1,13 +1,34 @@
 """Model for Interactive Medical Image Segmentation."""
 import tensorflow as tf
+from tensorflow.python.ops.metrics_impl import _streaming_confusion_matrix
 from utils import CLASSES, EarlyStopper
+from dataset_rot import get_colours
 from datetime import datetime
+import numpy as np
+import cv2
+from io import BytesIO
+import matplotlib
+
+matplotlib.use("agg")
+import matplotlib.pyplot as plt
 
 
 class Model(object):
     """Model for Interactive Medical Image Segmentation."""
 
-    def __init__(self, data, optimizer, weight_decay, dropout):
+    def __init__(
+        self,
+        data,
+        optimizer,
+        weight_decay,
+        dropout,
+        activation=tf.nn.relu,
+        lmbda=0.1,
+        sigma=1.0,
+        t_0=0.6,
+        build=True,
+        include_white=False,
+    ):
         """Initialize the graph with the given data.
 
         Args:
@@ -15,6 +36,9 @@ class Model(object):
             optimizer(`tf.train.Optimizer`): The optimizer instance
             weight_decay(float): L2 regularisation scale
             dropout(float): dropout probability
+            activation(callable): The activation function to be applied
+                (None value disables this)
+            build(bool): Whether to build the graph
         """
         # Sanity check
         if dropout <= 0 or dropout > 1:
@@ -26,14 +50,19 @@ class Model(object):
         self.weight_decay = weight_decay
         self.dropout = dropout
         self.optimizer = optimizer
+        self.activation = activation
 
         # Grid Search
-        self._lmbda = 0.1
-        self._sigma = 1.0
+        self._lmbda = lmbda
+        self._sigma = sigma
         # T_1 is ignored, as we're using softmax and checking for best value
-        self._t_0 = 0.6
+        self._t_0 = t_0
 
-        self._build_graph()
+        # Colour mapping
+        self._colours = get_colours(data["path"] + "gt/")
+
+        if build:
+            self._build_graph(include_white=include_white)
 
     def _conv_layer(
         self,
@@ -78,11 +107,13 @@ class Model(object):
             else:
                 return norm
 
-    def _model_func(self, inputs):
+    def _model_func(self, inputs, activation=tf.nn.relu):
         """Create model and return model output with and without softmax.
 
         Args:
             inputs(`tf.Tensor`): The inputs to the model
+            activation(callable): The activation function to be applied
+                (None value disables this)
 
         Returns:
             `tf.Tensor`: The output of the model (w. softmax)
@@ -91,51 +122,116 @@ class Model(object):
         """
         # Block 1
         z = self._conv_layer(
-            inputs, filters=64, kernel_size=3, dilation_rate=1, scope="b11"
+            inputs,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=1,
+            scope="b11",
+            activation=activation,
         )
         p1 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=1, scope="b12"
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=1,
+            scope="b12",
+            activation=activation,
         )
 
         # Block 2
         z = self._conv_layer(
-            p1, filters=64, kernel_size=3, dilation_rate=2, scope="b21"
+            p1,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=2,
+            scope="b21",
+            activation=activation,
         )
         p2 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=2, scope="b22"
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=2,
+            scope="b22",
+            activation=activation,
         )
 
         # Block 3
         z = self._conv_layer(
-            p2, filters=64, kernel_size=3, dilation_rate=4, scope="b31"
+            p2,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=4,
+            scope="b31",
+            activation=activation,
         )
         z = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=4, scope="b32"
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=4,
+            scope="b32",
+            activation=activation,
         )
         p3 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=4, scope="b33"
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=4,
+            scope="b33",
+            activation=activation,
         )
 
         # Block 4
         z = self._conv_layer(
-            p3, filters=64, kernel_size=3, dilation_rate=8, scope="b41"
+            p3,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=8,
+            scope="b41",
+            activation=activation,
         )
         z = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=8, scope="b42"
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=8,
+            scope="b42",
+            activation=activation,
         )
         p4 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=8, scope="b43"
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=8,
+            scope="b43",
+            activation=activation,
         )
 
         # Block 5
         z = self._conv_layer(
-            p4, filters=64, kernel_size=3, dilation_rate=16, scope="b51"
+            p4,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=16,
+            scope="b51",
+            activation=activation,
         )
         z = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=16, scope="b52"
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=16,
+            scope="b52",
+            activation=activation,
         )
         p5 = self._conv_layer(
-            z, filters=64, kernel_size=3, dilation_rate=16, scope="b53"
+            z,
+            filters=64,
+            kernel_size=3,
+            dilation_rate=16,
+            scope="b53",
+            activation=activation,
         )
 
         # Block 6
@@ -146,7 +242,12 @@ class Model(object):
             lambda: z,
         )
         z = self._conv_layer(
-            z, filters=128, kernel_size=1, dilation_rate=1, scope="b63"
+            z,
+            filters=128,
+            kernel_size=1,
+            dilation_rate=1,
+            scope="b63",
+            activation=activation,
         )
         z = tf.cond(
             self._is_train,
@@ -220,8 +321,7 @@ class Model(object):
                 (tf.reduce_sum(exp, axis=-1) * tf.to_float(mask)) / dist,
                 axis=[1, 2],
             )
-            # Squeezing to convert length 1 array to scalar
-            return tf.squeeze(psi), i + 1
+            return psi, i + 1
 
         psi = tf.zeros([shape[0]])
         i = tf.constant(0)
@@ -230,22 +330,51 @@ class Model(object):
         )
         return tf.reduce_mean(phi + self._lmbda * psi)
 
-    def _build_graph(self):
+    def _build_graph(self, include_white):
         self._is_train = tf.placeholder(shape=(), dtype=tf.bool)
         x, y = tf.cond(
             self._is_train,
             lambda: self.data["iterators"]["train"].get_next(),
             lambda: self.data["iterators"]["test"].get_next(),
         )
-        soft_out, out = self._model_func(x)
+        soft_out, out = self._model_func(x, activation=self.activation)
         self._loss = self._get_loss(x, y, soft_out, out)
         tf.summary.scalar("loss", self._loss)
 
         with tf.variable_scope("metrics") as scope:
+            # Get labels and predictions as [batch_size, length], where
+            # elements are labels of pixels
+            pred = tf.layers.flatten(tf.argmax(soft_out, axis=-1))
+            labels = tf.layers.flatten(tf.argmax(y, -1))
+
+            if not include_white:
+                # True indicates that the pixel does not have white colour
+                # This mask is obtained on labels only
+                mask = tf.not_equal(labels, self._colours.index((255, 255, 255)))
+                # Choose those pixels that DO NOT have white colour
+                # NOTE: This destroys the batch axis
+                labels = tf.boolean_mask(labels, mask)
+                # The same mask is used for predictions, to ignore the exact
+                # same pixels
+                pred = tf.boolean_mask(pred, mask)
+            else:
+                labels = tf.reshape(labels, [-1])
+                pred = tf.reshape(pred, [-1])
+
             _, self._acc_op = tf.metrics.accuracy(
-                labels=tf.argmax(y, -1), predictions=tf.argmax(soft_out, -1)
+                labels=labels, predictions=pred
             )
             tf.summary.scalar("acc", self._acc_op)
+
+            _, self._kappa_op = tf.contrib.metrics.cohen_kappa(
+                labels=labels, predictions_idx=pred, num_classes=CLASSES
+            )
+            tf.summary.scalar("kappa", self._kappa_op)
+
+            _, self._conf_mat = _streaming_confusion_matrix(
+                labels=labels, predictions=pred, num_classes=CLASSES
+            )
+            tf.summary.image("confusion", self._get_mat_img(self._conf_mat))
 
             metrics = tf.contrib.framework.get_variables(
                 scope, collection=tf.GraphKeys.LOCAL_VARIABLES
@@ -255,7 +384,30 @@ class Model(object):
         self._train_step = self.optimizer.minimize(self._loss)
         self._merged_summ = tf.summary.merge_all()
 
-    def evaluate(self, mode):
+    def _get_mat_img(self, conf_mat, numpy=False):
+        if numpy:
+            total = np.sum(conf_mat)
+            rescaled = (255 * (conf_mat / np.clip(total, 1, 1e7))).astype(
+                np.uint8
+            )
+            image = np.zeros((CLASSES * 10, CLASSES * 10))
+            for i in range(CLASSES * 10):
+                for j in range(CLASSES * 10):
+                    image[i, j] = rescaled[i // 10, j // 10]
+            return image
+        else:
+            total = tf.reduce_sum(conf_mat, axis=0)
+            rescaled = tf.cast(
+                255 * (conf_mat / tf.clip_by_value(total, 1, 1e7)), tf.uint8
+            )
+            image = tf.image.resize_images(
+                tf.reshape(rescaled, (1, CLASSES, CLASSES, 1)),
+                [CLASSES * 10, CLASSES * 10],
+                method=tf.image.ResizeMethod.NEAREST_NEIGHBOR,
+            )
+            return image
+
+    def evaluate(self, mode, sess=None):
         """Evaluate the model on the validation/test dataset.
 
         Mode should be one of "val" (validation) or "test" (testing)
@@ -263,16 +415,22 @@ class Model(object):
         mode = mode.lower().strip()
         if mode not in ["val", "test"]:
             raise ValueError("Mode should be one of 'val' or 'test'")
+        if not hasattr(self, "_sess"):
+            if sess is None:
+                raise ValueError(
+                    "Session not set. Please pass a session argument"
+                )
+            else:
+                self._sess = sess
 
         self._sess.run(self.data["init_ops"][mode])
         self._sess.run(self._init_metrics)
         count = 0
         curr_loss = 0
-        curr_acc = 0
         try:
             while True:
-                loss_diff, curr_acc = self._sess.run(
-                    [self._loss, self._acc_op],
+                loss_diff, curr_acc, curr_kappa, curr_conf = self._sess.run(
+                    [self._loss, self._acc_op, self._kappa_op, self._conf_mat],
                     feed_dict={self._is_train: False},
                 )
                 curr_loss += loss_diff
@@ -291,9 +449,26 @@ class Model(object):
             summary.value.add(tag="metrics/acc", simple_value=curr_acc)
             self._val_writer.add_summary(summary, self._step)
 
+            summary = tf.Summary()
+            summary.value.add(tag="metrics/kappa", simple_value=curr_kappa)
+            self._val_writer.add_summary(summary, self._step)
+
+            str_io = BytesIO()
+            conf_mat_img = self._get_mat_img(curr_conf, numpy=True)
+            plt.imsave(str_io, conf_mat_img, format="png", cmap="gray")
+            img_sum = tf.Summary.Image(
+                encoded_image_string=str_io.getvalue(),
+                height=conf_mat_img.shape[0],
+                width=conf_mat_img.shape[1],
+            )
+            summary = tf.Summary()
+            summary.value.add(tag="metrics/confusion", image=img_sum)
+            self._val_writer.add_summary(summary, self._step)
+
             print(
-                "Step: {:5d}, Val. Loss: {:12.4f}, Val. Acc: {:.4f}".format(
-                    self._step + 1, curr_loss, curr_acc
+                "Step: {:5d}, Val. Loss: {:12.4f}, Val. Acc: {:.4f}, "
+                "Val. Kappa: {:.4f}".format(
+                    self._step + 1, curr_loss, curr_acc, curr_kappa
                 )
             )
 
@@ -304,9 +479,59 @@ class Model(object):
                     self.stopper.update(curr_acc)
         else:
             print(
-                "Test Loss: {:12.4f}, Test Acc.: {:.4f}".format(
-                    curr_loss, curr_acc
-                )
+                "Test Loss: {:12.4f}, Test Acc.: {:.4f}, "
+                "Test Kappa: {:.4f}".format(curr_loss, curr_acc, curr_kappa)
+            )
+            np.save("./conf_mat.npy", curr_conf.astype(np.uint32))
+            print("Test Confustion Matrix saved as ./conf_mat.npy")
+
+        return curr_loss, curr_acc, curr_kappa, curr_conf
+
+    def inference(self, path, sess_options=tf.ConfigProto()):
+        """Build inference graph and runs on the actual test dataset.
+
+        When inference is required, this model should be initialized without
+        the graph being built. Note than this should not be called inside a
+        `tf.Session()`, as it creates one by itself.
+
+        Args:
+            path: path to the saved model
+            sess_options: options for the `tf.Session` invoked here
+        """
+        self._is_train = tf.constant(False)
+        x, name = self.data["iterators"]["actual"].get_next()
+        soft_out, _ = self._model_func(x, activation=self.activation)
+
+        _, indices = tf.nn.top_k(soft_out, k=2)
+        first, second = tf.unstack(indices, axis=-1)
+        pred = tf.where(
+            tf.not_equal(first, self._colours.index((255, 255, 255))),
+            first,
+            second,
+        )
+
+        loader = tf.train.Saver()
+
+        images = []
+        names = []
+        with tf.Session(config=sess_options) as sess:
+            loader.restore(sess, path)
+            try:
+                while True:
+                    curr_images, curr_names = sess.run([pred, name])
+                    images += list(curr_images)
+                    names += list(curr_names)
+            except tf.errors.OutOfRangeError:
+                # End of dataset
+                pass
+
+        for img, name in zip(images, names):
+            new_img = np.zeros((*(img.shape[:2]), 3))
+            for i in range(img.shape[0]):
+                for j in range(img.shape[1]):
+                    new_img[i, j] = self._colours[img[i, j]]
+            cv2.imwrite(
+                name.decode("utf8") + "_result.png", new_img[:, :, ::-1]
             )
 
     def train(
@@ -371,5 +596,10 @@ class Model(object):
             # Validation data testing
             if log_steps != 0 and i % log_steps == 0:
                 self.evaluate("val")
-                if self.stopper.stop:
+                if self.stopper is not None and self.stopper.stop:
+                    print("Stopping")
                     break
+
+            # Test data
+            if log_steps != 0 and i % (4 * log_steps) == 0:
+                self.evaluate("test")
