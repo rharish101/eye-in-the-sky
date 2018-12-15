@@ -20,7 +20,7 @@ parser.add_argument(
 
 # Known hyperparams
 parser.add_argument(
-    "--max-steps", type=int, default=1000, help="maximum no. of training steps"
+    "--max-steps", type=int, default=10000, help="maximum no. of training steps"
 )
 
 # Unknown hyperparams
@@ -29,18 +29,18 @@ parser.add_argument(
     "--val-split",
     type=float,
     default=0.2,
-    help="fraction of data to use as validation",
+    help="fraction of data to use as validation (deprecated)",
 )
 parser.add_argument(
     "--test-split",
     type=float,
     default=0.2,
-    help="fraction of data to use as test data",
+    help="fraction of data to use as test data (deprecated)",
 )
 parser.add_argument(
     "--early-stop-diff",
     type=float,
-    default=5e-4,
+    default=5e-7,
     help="minimum change for early stopping",
 )
 parser.add_argument(

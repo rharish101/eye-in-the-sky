@@ -34,13 +34,13 @@ parser.add_argument(
     "--val-split",
     type=float,
     default=0.2,
-    help="fraction of data to use as validation",
+    help="fraction of data to use as validation (deprecated)",
 )
 parser.add_argument(
     "--test-split",
     type=float,
     default=0.2,
-    help="fraction of data to use as test data",
+    help="fraction of data to use as test data (deprecated)",
 )
 parser.add_argument(
     "--early-stop-diff",
