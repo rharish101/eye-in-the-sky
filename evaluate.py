@@ -26,6 +26,11 @@ parser.add_argument(
     default="./model.ckpt",
     help="where the Tensorflow model is stored",
 )
+parser.add_argument(
+    "--include-white",
+    action="store_true",
+    help="whether to include white pixels in the target labels",
+)
 
 args = parser.parse_args()
 
@@ -44,6 +49,7 @@ model = Model(
     56.89889776692406,
     45.40359136227982,
     0.10805612575300722,
+    include_white=args.include_white,
 )
 
 # Limit GPU usage

@@ -23,6 +23,8 @@ The approach used is: [Interactive Medical Image Segmentation using Deep Learnin
 ```
 ./evaluate.py --data-path /path/to/train/dataset --save-dir /path/where/model/is/saved
 ```
+**NOTE**: The evaluation is done by excluding those pixels which are white in the target segmentation.
+In order to include those pixels, use the `--include-white` argument.
 
 ### Getting predictions for test data
 ```

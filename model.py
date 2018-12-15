@@ -27,6 +27,7 @@ class Model(object):
         sigma=1.0,
         t_0=0.6,
         build=True,
+        include_white=False,
     ):
         """Initialize the graph with the given data.
 
@@ -61,7 +62,7 @@ class Model(object):
         self._colours = get_colours(data["path"] + "gt/")
 
         if build:
-            self._build_graph()
+            self._build_graph(include_white=include_white)
 
     def _conv_layer(
         self,
@@ -329,7 +330,7 @@ class Model(object):
         )
         return tf.reduce_mean(phi + self._lmbda * psi)
 
-    def _build_graph(self):
+    def _build_graph(self, include_white):
         self._is_train = tf.placeholder(shape=(), dtype=tf.bool)
         x, y = tf.cond(
             self._is_train,
@@ -345,15 +346,20 @@ class Model(object):
             # elements are labels of pixels
             pred = tf.layers.flatten(tf.argmax(soft_out, axis=-1))
             labels = tf.layers.flatten(tf.argmax(y, -1))
-            # True indicates that the pixel does not have white colour
-            # This mask is obtained on labels only
-            mask = tf.not_equal(labels, self._colours.index((255, 255, 255)))
-            # Choose those pixels that DO NOT have white colour
-            # NOTE: This destroys the batch axis
-            labels = tf.boolean_mask(labels, mask)
-            # The same mask is used for predictions, to ignore the exact
-            # same pixels
-            pred = tf.boolean_mask(pred, mask)
+
+            if not include_white:
+                # True indicates that the pixel does not have white colour
+                # This mask is obtained on labels only
+                mask = tf.not_equal(labels, self._colours.index((255, 255, 255)))
+                # Choose those pixels that DO NOT have white colour
+                # NOTE: This destroys the batch axis
+                labels = tf.boolean_mask(labels, mask)
+                # The same mask is used for predictions, to ignore the exact
+                # same pixels
+                pred = tf.boolean_mask(pred, mask)
+            else:
+                labels = tf.reshape(labels, [-1])
+                pred = tf.reshape(pred, [-1])
 
             _, self._acc_op = tf.metrics.accuracy(
                 labels=labels, predictions=pred
@@ -476,7 +482,7 @@ class Model(object):
                 "Test Loss: {:12.4f}, Test Acc.: {:.4f}, "
                 "Test Kappa: {:.4f}".format(curr_loss, curr_acc, curr_kappa)
             )
-            np.save("./conf_mat.npy", curr_conf)
+            np.save("./conf_mat.npy", curr_conf.astype(np.uint32))
             print("Test Confustion Matrix saved as ./conf_mat.npy")
 
         return curr_loss, curr_acc, curr_kappa, curr_conf
