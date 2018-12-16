@@ -26,6 +26,11 @@ parser.add_argument(
     default="./model.ckpt",
     help="where the Tensorflow model is stored",
 )
+parser.add_argument(
+    "--include-white",
+    action="store_true",
+    help="whether to include white pixels in the output",
+)
 
 args = parser.parse_args()
 
@@ -50,5 +55,9 @@ model = Model(
 # Limit GPU usage
 gpu_options = tf.GPUOptions(allow_growth=True)
 print("Starting inference...")
-model.inference(args.save_dir, tf.ConfigProto(gpu_options=gpu_options))
+model.inference(
+    args.save_dir,
+    tf.ConfigProto(gpu_options=gpu_options),
+    include_white=args.include_white,
+)
 print("Inference done")

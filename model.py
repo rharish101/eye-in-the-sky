@@ -38,7 +38,11 @@ class Model(object):
             dropout(float): dropout probability
             activation(callable): The activation function to be applied
                 (None value disables this)
+            lmbda(float): The lambda hyperparameter
+            sigma(float): The sigma hyperparameter
+            t_0(float): The t_0 hyperparameter
             build(bool): Whether to build the graph
+            include_white(bool): Whether to include white pixels in the target
         """
         # Sanity check
         if dropout <= 0 or dropout > 1:
@@ -350,7 +354,9 @@ class Model(object):
             if not include_white:
                 # True indicates that the pixel does not have white colour
                 # This mask is obtained on labels only
-                mask = tf.not_equal(labels, self._colours.index((255, 255, 255)))
+                mask = tf.not_equal(
+                    labels, self._colours.index((255, 255, 255))
+                )
                 # Choose those pixels that DO NOT have white colour
                 # NOTE: This destroys the batch axis
                 labels = tf.boolean_mask(labels, mask)
@@ -410,7 +416,11 @@ class Model(object):
     def evaluate(self, mode, sess=None):
         """Evaluate the model on the validation/test dataset.
 
-        Mode should be one of "val" (validation) or "test" (testing)
+        Args:
+            mode(str): Mode of evaluation. It should be one of "val"
+                (validation) or "test" (testing)
+            sess(`tf.Session`): A tensorflow session, if one is not already
+                created by Model.train
         """
         mode = mode.lower().strip()
         if mode not in ["val", "test"]:
@@ -487,7 +497,9 @@ class Model(object):
 
         return curr_loss, curr_acc, curr_kappa, curr_conf
 
-    def inference(self, path, sess_options=tf.ConfigProto()):
+    def inference(
+        self, path, sess_options=tf.ConfigProto(), include_white=False
+    ):
         """Build inference graph and runs on the actual test dataset.
 
         When inference is required, this model should be initialized without
@@ -495,8 +507,10 @@ class Model(object):
         `tf.Session()`, as it creates one by itself.
 
         Args:
-            path: path to the saved model
-            sess_options: options for the `tf.Session` invoked here
+            path(str): Path to the saved model
+            sess_options(`tf.ConfigProto`): Options for the `tf.Session`
+                invoked here
+            include_white(bool): Whether to include white pixels in the output
         """
         self._is_train = tf.constant(False)
         x, name = self.data["iterators"]["actual"].get_next()
@@ -504,11 +518,14 @@ class Model(object):
 
         _, indices = tf.nn.top_k(soft_out, k=2)
         first, second = tf.unstack(indices, axis=-1)
-        pred = tf.where(
-            tf.not_equal(first, self._colours.index((255, 255, 255))),
-            first,
-            second,
-        )
+        if include_white:
+            pred = first
+        else:
+            pred = tf.where(
+                tf.not_equal(first, self._colours.index((255, 255, 255))),
+                first,
+                second,
+            )
 
         loader = tf.train.Saver()
 
@@ -548,6 +565,7 @@ class Model(object):
         Args:
             sess(`tf.Session`/`tf.InteractiveSession`): The TensorFlow session
             max_steps(int): Maximum number of steps to train for
+            logdir(str): Where to store Tensorboard logs
             log_steps(int): Steps after which to test on validation
                 (0 value disables this)
             stopper(`utils.EarlyStopper`): A stopper for early stopping on
