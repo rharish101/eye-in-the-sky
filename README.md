@@ -31,6 +31,221 @@ In order to include those pixels, use the `--include-white` argument.
 ./inference.py --data-path /path/to/test/dataset --save-dir /path/where/model/is/saved
 ```
 
+## Results
+### Excluding White pixels
+* Accuracy: 92.45%
+* Cohen's Kappa: 0.9026
+* Confusion Matrix:
+
+<table align="center">
+  <tr>
+    <td align="center">3177778</td>
+    <td align="center">674</td>
+    <td align="center">3042</td>
+    <td align="center">1798</td>
+    <td align="center">26138</td>
+    <td align="center">716</td>
+    <td align="center">0</td>
+    <td align="center">525</td>
+    <td align="center">260984</td>
+  </tr>
+  <tr>
+    <td align="center">725</td>
+    <td align="center">1114190</td>
+    <td align="center">89</td>
+    <td align="center">0</td>
+    <td align="center">59</td>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">2</td>
+    <td align="center">10788</td>
+  </tr>
+  <tr>
+    <td align="center">2297</td>
+    <td align="center">219</td>
+    <td align="center">1610603</td>
+    <td align="center">6947</td>
+    <td align="center">532</td>
+    <td align="center">4</td>
+    <td align="center">0</td>
+    <td align="center">68</td>
+    <td align="center">245576</td>
+  </tr>
+  <tr>
+    <td align="center">971</td>
+    <td align="center">0</td>
+    <td align="center">5887</td>
+    <td align="center">1626222</td>
+    <td align="center">338</td>
+    <td align="center">300</td>
+    <td align="center">0</td>
+    <td align="center">1</td>
+    <td align="center">84661</td>
+  </tr>
+  <tr>
+    <td align="center">25642</td>
+    <td align="center">10</td>
+    <td align="center">1039</td>
+    <td align="center">439</td>
+    <td align="center">4823761</td>
+    <td align="center">156</td>
+    <td align="center">1</td>
+    <td align="center">2844</td>
+    <td align="center">346080</td>
+  </tr>
+  <tr>
+    <td align="center">659</td>
+    <td align="center">0</td>
+    <td align="center">124</td>
+    <td align="center">1316</td>
+    <td align="center">329</td>
+    <td align="center">194079</td>
+    <td align="center">0</td>
+    <td align="center">34</td>
+    <td align="center">5565</td>
+  </tr>
+  <tr>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">34</td>
+    <td align="center">83</td>
+    <td align="center">0</td>
+    <td align="center">26891</td>
+    <td align="center">0</td>
+    <td align="center">1987</td>
+  </tr>
+  <tr>
+    <td align="center">1220</td>
+    <td align="center">0</td>
+    <td align="center">41</td>
+    <td align="center">0</td>
+    <td align="center">1306</td>
+    <td align="center">48</td>
+    <td align="center">0</td>
+    <td align="center">311439</td>
+    <td align="center">10363</td>
+  </tr>
+  <tr>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">0</td>
+  </tr>
+</table>
+
+### Including White pixels
+* Accuracy: 90.68%
+* Cohen's Kappa: 0.8776
+* Confusion Matrix:
+
+<table align="center">
+  <tr>
+    <td align="center">3177778</td>
+    <td align="center">674</td>
+    <td align="center">3042</td>
+    <td align="center">1798</td>
+    <td align="center">26138</td>
+    <td align="center">716</td>
+    <td align="center">0</td>
+    <td align="center">525</td>
+    <td align="center">260984</td>
+  </tr>
+  <tr>
+    <td align="center">725</td>
+    <td align="center">1114190</td>
+    <td align="center">89</td>
+    <td align="center">0</td>
+    <td align="center">59</td>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">2</td>
+    <td align="center">10788</td>
+  </tr>
+  <tr>
+    <td align="center">2297</td>
+    <td align="center">219</td>
+    <td align="center">1610602</td>
+    <td align="center">6947</td>
+    <td align="center">532</td>
+    <td align="center">4</td>
+    <td align="center">0</td>
+    <td align="center">68</td>
+    <td align="center">245577</td>
+  </tr>
+  <tr>
+    <td align="center">971</td>
+    <td align="center">0</td>
+    <td align="center">5887</td>
+    <td align="center">1626222</td>
+    <td align="center">338</td>
+    <td align="center">300</td>
+    <td align="center">0</td>
+    <td align="center">1</td>
+    <td align="center">84661</td>
+  </tr>
+  <tr>
+    <td align="center">25642</td>
+    <td align="center">10</td>
+    <td align="center">1039</td>
+    <td align="center">439</td>
+    <td align="center">4823763</td>
+    <td align="center">156</td>
+    <td align="center">1</td>
+    <td align="center">2844</td>
+    <td align="center">346078</td>
+  </tr>
+  <tr>
+    <td align="center">659</td>
+    <td align="center">0</td>
+    <td align="center">124</td>
+    <td align="center">1316</td>
+    <td align="center">329</td>
+    <td align="center">194079</td>
+    <td align="center">0</td>
+    <td align="center">34</td>
+    <td align="center">5565</td>
+  </tr>
+  <tr>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">0</td>
+    <td align="center">34</td>
+    <td align="center">83</td>
+    <td align="center">0</td>
+    <td align="center">26891</td>
+    <td align="center">0</td>
+    <td align="center">1987</td>
+  </tr>
+  <tr>
+    <td align="center">1220</td>
+    <td align="center">0</td>
+    <td align="center">41</td>
+    <td align="center">0</td>
+    <td align="center">1306</td>
+    <td align="center">48</td>
+    <td align="center">0</td>
+    <td align="center">311439</td>
+    <td align="center">10363</td>
+  </tr>
+  <tr>
+    <td align="center">335756</td>
+    <td align="center">20598</td>
+    <td align="center">253679</td>
+    <td align="center">102060</td>
+    <td align="center">327005</td>
+    <td align="center">5708</td>
+    <td align="center">2668</td>
+    <td align="center">12301</td>
+    <td align="center">7678057</td>
+  </tr>
+</table>
+
 ## Info
 All python scripts are executable and use argparse for commandline arguments. More info about a script's arguments can be obtained by:
 ```
