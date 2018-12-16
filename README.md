@@ -32,6 +32,8 @@ In order to include those pixels, use the `--include-white` argument.
 ```
 
 ## Results
+The following results were obtained by keeping "8.tif", "11.tif" and "12.tif" as test data, and training on the remaining images from the training dataset.
+
 ### Excluding White pixels
 * Accuracy: 92.45%
 * Cohen's Kappa: 0.9026
@@ -245,6 +247,8 @@ In order to include those pixels, use the `--include-white` argument.
     <td align="center">7678057</td>
   </tr>
 </table>
+
+Output images by inference on the test dataset are present in [this directory](./test_results).
 
 ## Info
 All python scripts are executable and use argparse for commandline arguments. More info about a script's arguments can be obtained by:
