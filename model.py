@@ -392,9 +392,12 @@ class Model(object):
 
     def _get_mat_img(self, conf_mat, numpy=False):
         if numpy:
+            conf_mat = conf_mat.transpose()
             total = np.sum(conf_mat)
-            rescaled = (255 * (conf_mat / np.clip(total, 1, 1e7))).astype(
-                np.uint8
+            rescaled = (
+                (255 * (conf_mat / np.clip(total, 1, 1e7)))
+                .astype(np.uint8)
+                .transpose()
             )
             image = np.zeros((CLASSES * 10, CLASSES * 10))
             for i in range(CLASSES * 10):
@@ -402,10 +405,12 @@ class Model(object):
                     image[i, j] = rescaled[i // 10, j // 10]
             return image
         else:
+            conf_mat = tf.transpose(conf_mat)
             total = tf.reduce_sum(conf_mat, axis=0)
             rescaled = tf.cast(
                 255 * (conf_mat / tf.clip_by_value(total, 1, 1e7)), tf.uint8
             )
+            rescaled = tf.transpose(rescaled)
             image = tf.image.resize_images(
                 tf.reshape(rescaled, (1, CLASSES, CLASSES, 1)),
                 [CLASSES * 10, CLASSES * 10],
