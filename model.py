@@ -316,11 +316,7 @@ class Model(object):
                 )
             )
             # mask for: y_i != y_j
-            mask = tf.where(
-                target[:, i_x, i_y] != target[:, :, :],
-                tf.zeros_like(target),
-                tf.ones_like(target),
-            )
+            mask = tf.exp(-0.1 / ((target[:, i_x, i_y] - target) ** 2 + 1e-7))
             psi += tf.reduce_sum(
                 (tf.reduce_sum(exp, axis=-1) * tf.to_float(mask)) / dist,
                 axis=[1, 2],
