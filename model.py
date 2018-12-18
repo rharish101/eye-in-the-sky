@@ -316,10 +316,11 @@ class Model(object):
                 )
             )
             # mask for: y_i != y_j
-            diff = target[:, i_x, i_y] - tf.broadcast_to(
-                target, target.get_shape.as_list()
+            diff = target - tf.broadcast_to(
+                target[:, i_x, i_y], target.get_shape().as_list()
             )
-            mask = tf.exp(-0.1 / (diff ** 2 + 1e-7))
+            mask = tf.exp(-0.1 / (tf.to_float(diff) ** 2 + tf.constant(1e-7)))
+            mask = tf.Print(mask, [i])
             psi += tf.reduce_sum(
                 (tf.reduce_sum(exp, axis=-1) * tf.to_float(mask)) / dist,
                 axis=[1, 2],
